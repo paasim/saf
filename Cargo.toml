@@ -2,7 +2,7 @@
 name = "saf"
 version = "0.1.0"
 edition = "2021"
-default-run = "interpreter"
+default-run = "compiler"
 
 [lib]
 name = "saf"
@@ -11,5 +11,9 @@ path = "src/lib.rs"
 [[bin]]
 name = "interpreter"
 path = "interpreter/main.rs"
+
+[[bin]]
+name = "compiler"
+path = "compiler/main.rs"
 
 [dependencies]

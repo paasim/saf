@@ -79,7 +79,7 @@ impl<S: fmt::Display, T: fmt::Display> fmt::Display for Val<S, T> {
                     .collect::<Vec<_>>()
                     .join("; ");
                 let stmts = fmt_vec(stmts, " ");
-                write!(f, "fn({}) {{ {}; {} }}", fmt_vec(pars, ", "), defs, stmts)
+                write!(f, "fn({}) {{ {} {} }}", fmt_vec(pars, ", "), defs, stmts)
             }
 
             Val::Array(v) => {
