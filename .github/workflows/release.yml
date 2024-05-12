@@ -1,0 +1,77 @@
+name: release
+on:
+  push:
+    tags:
+    - "[0-9]+.[0-9]+.[0-9]+"
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ env.VERSION }}
+    steps:
+      - uses: actions/checkout@v3
+      - name: Get the release version from the tag
+        run: |
+          cargo metadata --no-deps --format-version 1 \
+            | jq -r '"VERSION=" + .packages[0].version' \
+            >> $GITHUB_ENV
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create ${{ env.VERSION }}
+
+  build-release:
+    name: build-release
+    needs: ['create-release']
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        arch: [x86_64, arm64]
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: install dependencies and build (x86_64)
+      if: matrix.arch == 'x86_64'
+      run: |
+        cargo build --verbose --release
+        for bin in interpreter compiler; do
+          strip target/release/${bin}
+        done
+        echo "INSTALL_PATH=target/release" >> $GITHUB_ENV
+
+    - name: install dependencies and build (arm64)
+      if: matrix.arch == 'arm64'
+      run: |
+        ./arm64-cross/build.sh
+        docker run -u $(id -u):$(id -g) -v ${PWD}:/home/builder/rust-pkg --rm cross-compiler
+        for bin in interpreter compiler; do
+          docker run -u $(id -u):$(id -g) -v ${PWD}:/home/builder/rust-pkg --rm \
+            cross-compiler aarch64-linux-gnu-strip \
+            /home/builder/rust-pkg/target/aarch64-unknown-linux-gnu/release/${bin}
+        done
+        echo "INSTALL_PATH=target/aarch64-unknown-linux-gnu/release" >> $GITHUB_ENV
+
+    - name: Build archive
+      shell: bash
+      run: |
+        staging="saf-v${{ needs.create-release.outputs.version }}-${{ matrix.arch }}"
+        mkdir -p "$staging"
+        cp -r LICENSE README.md "$staging/"
+        cp "${{ env.INSTALL_PATH }}/interpreter" "$staging/safi"
+        cp "${{ env.INSTALL_PATH }}/compiler" "$staging/safc"
+        tar czf "$staging.tar.gz" "$staging"
+        echo "ASSET=$staging.tar.gz" >> $GITHUB_ENV
+
+    - name: Upload release archive
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        gh release upload ${{ needs.create-release.outputs.version }} ${{ env.ASSET }}
