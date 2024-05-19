@@ -24,8 +24,6 @@ pub enum Token {
     Lt,
     Cond,
     Colon,
-    Len,
-    TypeOf,
 
     // Delimiters
     Comma,
@@ -75,8 +73,6 @@ impl fmt::Display for Token {
             Self::Function => write!(f, "fn"),
             Self::True => write!(f, "true"),
             Self::False => write!(f, "false"),
-            Self::Len => write!(f, "#"),
-            Self::TypeOf => write!(f, "@"),
         }
     }
 }
@@ -124,8 +120,6 @@ impl Token {
             '}' => Ok(Self::Rbrace),
             '<' => Ok(Self::Lt),
             '>' => Ok(Self::Gt),
-            '@' => Ok(Self::TypeOf),
-            '#' => Ok(Self::Len),
             '"' => Self::scan_string(chars),
             '_' => Ok(Self::scan_ident('_', chars)),
             '0'..='9' => Self::scan_digit(c, chars),

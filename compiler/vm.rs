@@ -254,13 +254,13 @@ mod tests {
 
     #[test]
     fn simple_array() {
-        let prog = "b = 5; a = [1,2] < b; a;";
+        let prog = "b = 5; a = [1,2] + b; a;";
         let mut vm = to_vm(prog).unwrap();
         vm.run_all().unwrap();
         let v = vec![1, 2, 5].into_iter().map(CValue::Int).collect();
         assert_eq!(vm.take_stack(), vec![CValue::Array(v)]);
 
-        let prog = "a = [1,2,7,4,5]; >a;";
+        let prog = "a = [1,2,7,4,5]; -a;";
         let mut vm = to_vm(prog).unwrap();
         vm.run_all().unwrap();
         assert_eq!(vm.take_stack(), vec![CValue::Int(5)]);
@@ -274,7 +274,7 @@ mod tests {
 
     #[test]
     fn subset_call_nest_silly() {
-        let prog = "c = [1] < fn() [99]; >(>c)();";
+        let prog = "c = [1] + fn() [99]; -(-c)();";
         let mut vm = to_vm(prog).unwrap();
         vm.run_all().unwrap();
         assert_eq!(vm.take_stack(), vec![CValue::Int(99)]);

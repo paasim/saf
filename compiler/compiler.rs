@@ -279,9 +279,9 @@ mod tests {
         let b = false;
         let e = Box::new(Expr::Value(Value::Bool(b)));
         let len = 2;
-        assert_eq!(comp.add_expr(Expr::Unary(UnOp::TypeOf, e)).unwrap(), len);
+        assert_eq!(comp.add_expr(Expr::Unary(UnOp::Negation, e)).unwrap(), len);
         assert_eq!(comp.instructions.len(), len);
-        let instr_exp = vec![Instruction::Bool(b), Instruction::UnOp(UnOp::TypeOf)];
+        let instr_exp = vec![Instruction::Bool(b), Instruction::UnOp(UnOp::Negation)];
         assert_eq!(comp.instructions, instr_exp);
         assert_eq!(comp.constants.len(), 0);
         assert_eq!(comp.symbols.len(), 0);
@@ -433,7 +433,7 @@ mod tests {
             plus(z, 2);
 
             c = [1] < fn() [99];
-            >(>c)();
+            -(-c)();
 
             fib = fn(n) n < 3 ? 1 : fib(n-1) + fib(n-2);
             fib(10);

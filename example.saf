@@ -1,6 +1,5 @@
 x = "test";
 x;
-#x;
 
 z = 5;
 plus = fn(x, y) x + y;
@@ -14,21 +13,19 @@ twice(7, plus_z);
 
 fib = fn(n) n < 3 ? 1 : fib(n-1) + fib(n-2);
 fib(10);
-@fib;
 
 v = [1, 2, 13];
 v;
-#v;
->v;
+-v;
 <v;
-v < 5 < 7;
+v + 5 + 7;
 
-mk_arr = fn(i) i == 0 ? [] : mk_arr(i-1) < i - 1;
+mk_arr = fn(i) i == 0 ? [] : mk_arr(i-1) + (i - 1);
 arr = mk_arr(5);
 arr;
 
-map = fn(v, f) #v == 0 ? [] : map(<v, f) < f(>v);
+map = fn(v, f) !v ? [] : map(<v, f) + f(-v);
 map(arr, fn(x) x * 2);
 
-reduce = fn(v, f, acc) #v == 0 ? acc : reduce(<v, f, f(acc, >v));
+reduce = fn(v, f, acc) !v ? acc : reduce(<v, f, f(acc, -v));
 reduce(arr, fn(acc, x) acc + x, 0);

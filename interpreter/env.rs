@@ -202,7 +202,7 @@ mod tests {
 
     #[test]
     fn simple_array() {
-        let prog = "b = 5; a = [1,2] < b; a;";
+        let prog = "b = 5; a = [1,2] + b; a;";
         let mut env = Env::default();
         let val = to_ast(prog)
             .and_then(|stmts| env.eval_stmts(stmts))
@@ -210,7 +210,7 @@ mod tests {
         let v = vec![1, 2, 5].into_iter().map(Value::Int).collect();
         assert_eq!(val, Some(Value::Array(v)));
 
-        let prog = "a = [1,2,7,4,5]; >a;";
+        let prog = "a = [1,2,7,4,5]; -a;";
         let mut env = Env::default();
         let val = to_ast(prog)
             .and_then(|stmts| env.eval_stmts(stmts))
@@ -228,7 +228,7 @@ mod tests {
 
     #[test]
     fn subset_call_nest_silly() {
-        let prog = "c = [1] < fn() [99]; >(>c)();";
+        let prog = "c = [1] + fn() [99]; -(-c)();";
         let mut env = Env::default();
         let val = to_ast(prog)
             .and_then(|stmts| env.eval_stmts(stmts))

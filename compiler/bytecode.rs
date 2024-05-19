@@ -260,7 +260,7 @@ mod tests {
         let consts_arr = [(f, 0), (v, 1)];
         let consts_exp: Vec<_> = consts_arr.iter().cloned().map(|(v, _)| v).collect();
 
-        let mut instrs_exp = vec![Instruction::Call([1]), Instruction::UnOp(UnOp::TypeOf)];
+        let mut instrs_exp = vec![Instruction::Call([1]), Instruction::UnOp(UnOp::Minus)];
 
         let symbols_arr = [(String::from("s1"), 0)];
         let symbols_exp: Vec<_> = symbols_arr.iter().cloned().map(|(v, _)| v).collect();

@@ -32,9 +32,7 @@ mod tests {
         let s = r#"
             five = 5;
             ten = 10;
-            add = fn(x, y) {
-              x + y;
-            };
+            add = fn(x, y) x + y;
             result = add(five, ten);"#;
 
         let tokens: Vec<Token> = scan(s).unwrap();
@@ -55,12 +53,9 @@ mod tests {
             Token::Comma,
             Token::Ident(String::from("y")),
             Token::Rparen,
-            Token::Lbrace,
             Token::Ident(String::from("x")),
             Token::Plus,
             Token::Ident(String::from("y")),
-            Token::Semicolon,
-            Token::Rbrace,
             Token::Semicolon,
             Token::Ident(String::from("result")),
             Token::Assign,

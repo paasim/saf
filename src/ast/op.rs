@@ -9,9 +9,6 @@ pub enum UnOp {
     Minus,
     Negation,
     Init,
-    Pop,
-    Len,
-    TypeOf,
 }
 
 impl fmt::Display for UnOp {
@@ -21,23 +18,6 @@ impl fmt::Display for UnOp {
             Self::Minus => write!(f, "-"),
             Self::Negation => write!(f, "!"),
             Self::Init => write!(f, "<"),
-            Self::Pop => write!(f, ">"),
-            Self::Len => write!(f, "#"),
-            Self::TypeOf => write!(f, "@"),
-        }
-    }
-}
-
-impl TryFrom<Token> for UnOp {
-    type Error = Error;
-
-    fn try_from(t: Token) -> Res<Self> {
-        match t {
-            Token::And => Ok(Self::Minus),
-            Token::Or => Ok(Self::Negation),
-            Token::Len => Ok(Self::Len),
-            Token::TypeOf => Ok(Self::TypeOf),
-            t => Error::parsing(format!("saw '{}', expected a unary op", t)),
         }
     }
 }
@@ -50,22 +30,16 @@ impl UnOp {
         match (self, v) {
             (UnOp::Paren, v) => Ok(v),
             (UnOp::Minus, Val::Int(i)) => Ok(Val::Int(-i)),
-            (UnOp::Negation, Val::Bool(b)) => Ok(Val::Bool(!b)),
-            (UnOp::Pop, Val::Array(v)) => match v.last() {
-                Some(v) => Ok(v.clone()),
+            (UnOp::Minus, Val::Array(mut v)) => match v.pop() {
+                Some(v) => Ok(v),
                 None => Error::eval("trying to pop from an empty array"),
             },
+            (UnOp::Negation, Val::Bool(b)) => Ok(Val::Bool(!b)),
+            (UnOp::Negation, Val::Array(v)) => Ok(Val::Bool(v.is_empty())),
             (UnOp::Init, Val::Array(mut v)) => {
                 v.pop();
                 Ok(Val::Array(v))
             }
-            (UnOp::Len, Val::String(s)) => Ok(Val::Int(s.len().try_into()?)),
-            (UnOp::Len, Val::Array(v)) => Ok(Val::Int(v.len().try_into()?)),
-            (UnOp::TypeOf, Val::String(_)) => Ok(Val::String(String::from("string"))),
-            (UnOp::TypeOf, Val::Bool(_)) => Ok(Val::String(String::from("bool"))),
-            (UnOp::TypeOf, Val::Int(_)) => Ok(Val::String(String::from("int"))),
-            (UnOp::TypeOf, Val::Array(_)) => Ok(Val::String(String::from("array"))),
-            (UnOp::TypeOf, Val::Function(_, _, _)) => Ok(Val::String(String::from("function"))),
             (op, v) => Error::eval(format!("{} cannot be evaluated with {}", v, op)),
         }
     }
@@ -142,16 +116,16 @@ impl BinOp {
     ) -> Res<Val<S, T>> {
         match (self, lhs, rhs) {
             (BinOp::Or, Val::Bool(l), Val::Bool(r)) => Ok(Val::Bool(l || r)),
-            (BinOp::Lt, Val::Array(mut l), v) => {
-                l.push(v);
-                Ok(Val::Array(l))
-            }
             (BinOp::And, Val::Bool(l), Val::Bool(r)) => Ok(Val::Bool(l && r)),
             (BinOp::Lt, Val::Int(l), Val::Int(r)) => Ok(Val::Bool(l < r)),
             (BinOp::Gt, Val::Int(l), Val::Int(r)) => Ok(Val::Bool(l > r)),
             (BinOp::Minus, Val::Int(l), Val::Int(r)) => Ok(Val::Int(l - r)),
             (BinOp::Plus, Val::Int(l), Val::Int(r)) => Ok(Val::Int(l + r)),
             (BinOp::Plus, Val::String(l), Val::String(r)) => Ok(Val::String(l + &r)),
+            (BinOp::Plus, Val::Array(mut l), v) => {
+                l.push(v);
+                Ok(Val::Array(l))
+            }
             (BinOp::Div, Val::Int(l), Val::Int(r)) => Ok(Val::Int(l / r)),
             (BinOp::Mult, Val::Int(l), Val::Int(r)) => Ok(Val::Int(l * r)),
             (BinOp::Eq, Val::Bool(l), Val::Bool(r)) => Ok(Val::Bool(l == r)),

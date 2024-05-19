@@ -23,7 +23,7 @@ impl fmt::Display for Expr {
             }
             Expr::Cond(c, t, fa) => write!(f, "{} ? {} : {}", c, t, fa),
             Expr::Binary(l, o, r) => write!(f, "{} {} {}", l, o, r),
-            Expr::Unary(UnOp::Paren, e) => write!(f, "{}", e),
+            Expr::Unary(UnOp::Paren, e) => write!(f, "({})", e),
             Expr::Unary(o, e) => write!(f, "{}{}", o, e),
             Expr::Ident(i) => write!(f, "{}", i),
             Expr::Value(v) => write!(f, "{}", v),
@@ -34,6 +34,11 @@ impl fmt::Display for Expr {
 impl Expr {
     pub fn parse(tokens: &mut Tokens) -> Res<Self> {
         let mut e = match next_token(tokens, "an expression")? {
+            Token::Ident(ident) => Ok(Self::Ident(ident)),
+            Token::String(s) => Ok(Self::Value(Val::String(s))),
+            Token::True => Ok(Self::Value(Val::Bool(true))),
+            Token::False => Ok(Self::Value(Val::Bool(false))),
+            Token::Int(i) => Ok(Self::Value(Val::Int(i))),
             Token::Lparen => {
                 let e = Self::parse_unary(UnOp::Paren, tokens)?;
                 expect_token(tokens, &Token::Rparen)?;
@@ -41,16 +46,8 @@ impl Expr {
             }
             Token::Minus => Self::parse_unary(UnOp::Minus, tokens),
             Token::Negation => Self::parse_unary(UnOp::Negation, tokens),
-            Token::Len => Self::parse_unary(UnOp::Len, tokens),
-            Token::TypeOf => Self::parse_unary(UnOp::TypeOf, tokens),
-            Token::Ident(ident) => Ok(Self::Ident(ident)),
-            Token::Function => Val::parse_function(tokens).map(Self::Value),
-            Token::Gt => Self::parse_unary(UnOp::Pop, tokens),
             Token::Lt => Self::parse_unary(UnOp::Init, tokens),
-            Token::String(s) => Ok(Self::Value(Val::String(s))),
-            Token::True => Ok(Self::Value(Val::Bool(true))),
-            Token::False => Ok(Self::Value(Val::Bool(false))),
-            Token::Int(i) => Ok(Self::Value(Val::Int(i))),
+            Token::Function => Val::parse_function(tokens).map(Self::Value),
             Token::Lbracket => Val::parse_array(tokens).map(Self::Value),
             t => Error::parsing(format!("saw '{}', expected an expression", t)),
         }?;
@@ -70,6 +67,9 @@ impl Expr {
     }
 
     fn mk_unary(self, op: UnOp) -> Res<Self> {
+        if let UnOp::Paren = op {
+            return Ok(Self::Unary(op, Box::new(self)));
+        }
         match self {
             Expr::Cond(c, t, f) => Ok(Expr::Cond(Box::new(c.mk_unary(op)?), t, f)),
             Expr::Binary(l, o, r) => Ok(Expr::Binary(Box::new(l.mk_unary(op)?), o, r)),
@@ -169,6 +169,22 @@ mod tests {
             )),
             BinOp::Gt,
             int(3),
+        );
+        assert_eq!(expr, exp)
+    }
+
+    #[test]
+    fn simple_expr_works4() {
+        let s = "3 - (4 + 2)";
+        let ts: Vec<Token> = scan(s).unwrap();
+        let expr = Expr::parse(&mut ts.into_iter().peekable()).unwrap();
+        let exp = Expr::Binary(
+            int(3),
+            BinOp::Minus,
+            Box::new(Expr::Unary(
+                UnOp::Paren,
+                Box::new(Expr::Binary(int(4), BinOp::Plus, int(2))),
+            )),
         );
         assert_eq!(expr, exp)
     }

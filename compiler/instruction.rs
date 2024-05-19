@@ -37,9 +37,6 @@ impl fmt::Display for Instruction {
             Self::UnOp(UnOp::Minus) => write!(f, "Minus"),
             Self::UnOp(UnOp::Negation) => write!(f, "Negation"),
             Self::UnOp(UnOp::Init) => write!(f, "Init"),
-            Self::UnOp(UnOp::Pop) => write!(f, "Pop"),
-            Self::UnOp(UnOp::Len) => write!(f, "Len"),
-            Self::UnOp(UnOp::TypeOf) => write!(f, "TypeOf"),
             Self::BinOp(BinOp::Or) => write!(f, "Or"),
             Self::BinOp(BinOp::And) => write!(f, "And"),
             Self::BinOp(BinOp::Lt) => write!(f, "Lt"),
@@ -53,24 +50,6 @@ impl fmt::Display for Instruction {
         }
     }
 }
-
-/*
-pub struct Bytecode(vec::IntoIter<u8>);
-
-impl From<Vec<u8>> for Bytecode {
-    fn from(v: Vec<u8>) -> Self {
-        Self(v.into_iter())
-    }
-}
-
-impl Iterator for Bytecode {
-    type Item = Res<Instruction>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        Instruction::ser_opt(&mut self.0)
-    }
-}
-*/
 
 fn get_u8(it: &mut vec::IntoIter<u8>, op: &str) -> Res<u8> {
     match it.next() {
@@ -103,19 +82,16 @@ impl Instruction {
             10 => Ok(Self::UnOp(UnOp::Minus)),
             11 => Ok(Self::UnOp(UnOp::Negation)),
             12 => Ok(Self::UnOp(UnOp::Init)),
-            13 => Ok(Self::UnOp(UnOp::Pop)),
-            14 => Ok(Self::UnOp(UnOp::Len)),
-            15 => Ok(Self::UnOp(UnOp::TypeOf)),
-            16 => Ok(Self::BinOp(BinOp::Or)),
-            17 => Ok(Self::BinOp(BinOp::And)),
-            18 => Ok(Self::BinOp(BinOp::Lt)),
-            19 => Ok(Self::BinOp(BinOp::Gt)),
-            20 => Ok(Self::BinOp(BinOp::NotEq)),
-            21 => Ok(Self::BinOp(BinOp::Eq)),
-            22 => Ok(Self::BinOp(BinOp::Minus)),
-            23 => Ok(Self::BinOp(BinOp::Plus)),
-            24 => Ok(Self::BinOp(BinOp::Div)),
-            25 => Ok(Self::BinOp(BinOp::Mult)),
+            13 => Ok(Self::BinOp(BinOp::Or)),
+            14 => Ok(Self::BinOp(BinOp::And)),
+            15 => Ok(Self::BinOp(BinOp::Lt)),
+            16 => Ok(Self::BinOp(BinOp::Gt)),
+            17 => Ok(Self::BinOp(BinOp::NotEq)),
+            18 => Ok(Self::BinOp(BinOp::Eq)),
+            19 => Ok(Self::BinOp(BinOp::Minus)),
+            20 => Ok(Self::BinOp(BinOp::Plus)),
+            21 => Ok(Self::BinOp(BinOp::Div)),
+            22 => Ok(Self::BinOp(BinOp::Mult)),
             b => Error::eval(format!("unknown opcode {}", b)),
         };
         Some(instr)
@@ -143,19 +119,16 @@ impl Instruction {
             Self::UnOp(UnOp::Minus) => 10,
             Self::UnOp(UnOp::Negation) => 11,
             Self::UnOp(UnOp::Init) => 12,
-            Self::UnOp(UnOp::Pop) => 13,
-            Self::UnOp(UnOp::Len) => 14,
-            Self::UnOp(UnOp::TypeOf) => 15,
-            Self::BinOp(BinOp::Or) => 16,
-            Self::BinOp(BinOp::And) => 17,
-            Self::BinOp(BinOp::Lt) => 18,
-            Self::BinOp(BinOp::Gt) => 19,
-            Self::BinOp(BinOp::NotEq) => 20,
-            Self::BinOp(BinOp::Eq) => 21,
-            Self::BinOp(BinOp::Minus) => 22,
-            Self::BinOp(BinOp::Plus) => 23,
-            Self::BinOp(BinOp::Div) => 24,
-            Self::BinOp(BinOp::Mult) => 25,
+            Self::BinOp(BinOp::Or) => 13,
+            Self::BinOp(BinOp::And) => 14,
+            Self::BinOp(BinOp::Lt) => 15,
+            Self::BinOp(BinOp::Gt) => 16,
+            Self::BinOp(BinOp::NotEq) => 17,
+            Self::BinOp(BinOp::Eq) => 18,
+            Self::BinOp(BinOp::Minus) => 19,
+            Self::BinOp(BinOp::Plus) => 20,
+            Self::BinOp(BinOp::Div) => 21,
+            Self::BinOp(BinOp::Mult) => 22,
         }
     }
 
@@ -178,7 +151,7 @@ mod tests {
 
     #[test]
     fn add() {
-        let n = 25;
+        let n = 22;
         assert_eq!(Instruction::BinOp(BinOp::Mult).op_code(), n);
         for i in 0..=n {
             // 2 is enough operands to parse
