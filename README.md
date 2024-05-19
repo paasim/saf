@@ -12,7 +12,9 @@ There are two binaries, an interpreter and a compiler. They are used like so:
 # build the compiler and the interpreter with cargo,
 # in some cases the interpreter provides less obscure error messages
 # prebuilt versions also exist as releases
-make build
+cargo build -r
+[ ! -L safi ] && ln -s ./target/release/interpreter safi
+[ ! -L safc ] && ln -s ./target/release/compiler safc
 
 ./safi # start repl
 ./safi -f example.saf # interpret a file
@@ -24,7 +26,7 @@ make build
 
 ## language
 
-`saf` has booleans, (signed) integers, strings, linked lists and fuctions. It works like so:
+`saf` has booleans, (signed) integers, strings, linked lists and functions. It works like so:
 
 ```saf
 > x = "test";

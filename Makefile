@@ -2,8 +2,6 @@
 
 build:
 	cargo build -r
-	ln -s ./target/release/interpreter safi
-	ln -s ./target/release/compiler safc
 
 check:
 	.git/hooks/pre-commit
