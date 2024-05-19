@@ -23,7 +23,7 @@ impl<'a> Env<'a> {
     pub fn get(&self, k: &str) -> Res<Value> {
         match self.get_opt(k) {
             Some(v) => Ok(v.clone()),
-            None => Error::undefined(k),
+            None => Error::eval(format!("{} is undefined", k)),
         }
     }
 
@@ -33,7 +33,7 @@ impl<'a> Env<'a> {
             Expr::Cond(cond, true_, false_) => match self.eval_expr(*cond)? {
                 Val::Bool(true) => self.eval_expr(*true_),
                 Val::Bool(false) => self.eval_expr(*false_),
-                e => Error::value_custom(format!("condition '{}' is not boolean", e)),
+                e => Error::eval(format!("condition '{}' is not boolean", e)),
             },
             Expr::Binary(lhs, op, rhs) => op.eval(self.eval_expr(*lhs)?, self.eval_expr(*rhs)?),
             Expr::Unary(op, e) => self.eval_expr(*e).and_then(|v| op.eval(v)),
@@ -45,10 +45,10 @@ impl<'a> Env<'a> {
     fn eval_call(&self, expr: Expr, args: Vec<Expr>) -> Res<Value> {
         let (mut params, mut defs, stmts) = match self.eval_expr(expr)? {
             Val::Function(params, defs, stmts) => (params, defs, stmts),
-            v => Error::value_custom(format!("{} is not callable", v))?,
+            v => Error::eval(format!("{} is not callable", v))?,
         };
         if args.len() > params.len() {
-            Error::value_custom("too many arguments")?
+            Error::eval("too many arguments")?
         }
         let params_rest = params.split_off(args.len());
         let new_defs = args
@@ -90,7 +90,7 @@ impl<'a> Env<'a> {
         };
         match env.eval_stmts(stmts)? {
             Some(v) => Ok(v),
-            _ => Error::value_custom("last statement is not an expression")?,
+            _ => Error::eval("last statement is not an expression")?,
         }
     }
 }

@@ -18,14 +18,14 @@ impl Vm {
     fn get_const(&self, ind: u16) -> Res<CValue> {
         match self.constants.get(ind as usize) {
             Some(v) => Ok(v.clone()),
-            None => Error::run_custom(format!("constant {} not found", ind)),
+            None => Error::eval(format!("constant {} not found", ind)),
         }
     }
 
     fn next_instr(&mut self) -> Res<Instruction> {
         match self.instructions.pop() {
             Some(i) => Ok(i),
-            None => Error::run_custom("unexpected end of instructions"),
+            None => Error::eval("unexpected end of instructions"),
         }
     }
 
@@ -36,14 +36,14 @@ impl Vm {
     fn stack_pop(&mut self) -> Res<CValue> {
         match self.stack.pop() {
             Some(v) => Ok(v),
-            None => Error::run_custom("trying to get value from an empty stack"),
+            None => Error::eval("trying to get value from an empty stack"),
         }
     }
 
     fn get_var(&mut self, ind: u16) -> Res<CValue> {
         match self.variables.iter().rev().find(|(i, _)| *i == ind) {
             Some((_, v)) => Ok(v.clone()),
-            None => Error::run_custom(format!("{} is undefined", ind)),
+            None => Error::eval(format!("{} is undefined", ind)),
         }
     }
 
@@ -72,7 +72,7 @@ impl Vm {
             Instruction::JumpIfNot(n) => match self.stack_pop()? {
                 CValue::Bool(false) => self.skip_instr(u16::from_be_bytes(n) as usize)?,
                 CValue::Bool(true) => {}
-                v => Error::run_custom(format!("{} is not boolean", v))?,
+                v => Error::eval(format!("{} is not boolean", v))?,
             },
             Instruction::UnOp(op) => {
                 let v = self.stack_pop()?;
@@ -91,11 +91,11 @@ impl Vm {
     fn run_call(&mut self, n: usize) -> Res<()> {
         let (mut params, mut defs, mut stmts) = match self.stack_pop()? {
             Val::Function(p, d, s) => (p, d, s),
-            v => Error::run_custom(format!("{} is not callable", v))?,
+            v => Error::eval(format!("{} is not callable", v))?,
         };
         let args = self.stack.split_off(self.stack.len() - n);
         if args.len() > params.len() {
-            Error::value_custom("too many arguments")?
+            Error::eval("too many arguments")?
         }
         let params_rest = params.split_off(args.len());
         defs.extend(params.into_iter().zip(args));

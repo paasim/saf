@@ -57,7 +57,7 @@ impl Bytecode {
     fn next(&mut self) -> Res<u8> {
         match self.bytes.next() {
             Some(b) => Ok(b),
-            None => Error::parsing_custom("unexpected end of bytes")?,
+            None => Error::parsing("unexpected end of bytes")?,
         }
     }
 
@@ -82,7 +82,7 @@ impl Bytecode {
     pub fn deserialize(&mut self) -> Res<(Vec<CValue>, Vec<Instruction>)> {
         match self.get_version()? {
             BYTECODE_VERSION => {}
-            v => Error::parsing_custom(format!("unexpected version {}", v))?,
+            v => Error::parsing(format!("unexpected version {}", v))?,
         }
         Ok((self.deser_constants()?, self.deser_instructions()?))
     }
@@ -90,7 +90,7 @@ impl Bytecode {
     pub fn get_version(&mut self) -> Res<u8> {
         match &self.state {
             State::New => {}
-            s => Error::parsing_custom(format!("cant read version after {}", s))?,
+            s => Error::parsing(format!("cant read version after {}", s))?,
         }
         let res = self.next()?;
         self.state.incr();
@@ -100,7 +100,7 @@ impl Bytecode {
     fn deser_constants(&mut self) -> Res<Vec<CValue>> {
         match &self.state {
             State::VersionRead => {}
-            s => Error::parsing_custom(format!("cant get constants after {}", s))?,
+            s => Error::parsing(format!("cant get constants after {}", s))?,
         }
         let n = usize::from_be_bytes(self.next_8()?);
         let v = (0..n).map(|_| self.deser_cvalue()).collect::<Res<_>>()?;
@@ -111,7 +111,7 @@ impl Bytecode {
     fn deser_instructions(&mut self) -> Res<Vec<Instruction>> {
         match &self.state {
             State::ConstantsRead => {}
-            s => Error::parsing_custom(format!("cant get instructions after {}", s))?,
+            s => Error::parsing(format!("cant get instructions after {}", s))?,
         }
         let n = usize::from_be_bytes(self.next_8()?);
         let v = (0..n)
@@ -138,7 +138,7 @@ impl Bytecode {
             3 => self.deser_str().map(CValue::String),
             4 => self.deser_arr(),
             5 => self.deser_func(),
-            b => Error::parsing_custom(format!("invalid type {}, must be in {{1..5}}", b))?,
+            b => Error::parsing(format!("invalid type {}, must be in {{1..5}}", b))?,
         }
     }
 

@@ -1,76 +1,29 @@
-use crate::ast::{BinOp, UnOp};
 use std::{error, fmt, io, num, string};
 
 #[derive(Debug)]
 pub enum Error {
-    Vm(String),
     Lexing(String),
     Parsing(String),
-    Value(String),
+    Eval(String),
     Compile(String),
 }
 
 pub type Res<T> = Result<T, Error>;
 
-fn mismatch<U: fmt::Display>(saw: Option<U>, exp: Vec<U>) -> String {
-    let exp: Option<String> = if exp.is_empty() {
-        None
-    } else {
-        let strs: Vec<_> = exp.into_iter().map(|u| u.to_string()).collect();
-        Some(strs.join(", "))
-    };
-    match (saw, exp) {
-        (Some(saw), Some(exp)) => format!("unexpected '{}', expected '{}'", saw, exp),
-        (Some(saw), _) => format!("unexpected '{}'", saw),
-        (_, Some(exp)) => format!("expected '{}'", exp),
-        _ => "unexpected input".to_string(),
-    }
-}
-
 impl Error {
-    pub fn lexing<T, U: fmt::Display>(saw: Option<U>, exp: Vec<U>) -> Res<T> {
-        Err(Self::Lexing(mismatch(saw, exp)))
+    pub fn eval<T>(msg: impl fmt::Display) -> Res<T> {
+        Err(Self::Eval(msg.to_string()))
     }
 
-    pub fn parsing<T, U: fmt::Display>(saw: Option<U>, exp: Vec<U>) -> Res<T> {
-        Err(Self::Parsing(mismatch(saw, exp)))
-    }
-
-    pub fn unop<T>(op: &UnOp, v: impl fmt::Display) -> Res<T> {
-        Err(Self::Value(format!(
-            "{} cannot be evaluated with {}",
-            v, op
-        )))
-    }
-
-    pub fn binop<T>(lhs: impl fmt::Display, rhs: impl fmt::Display, op: &BinOp) -> Res<T> {
-        Err(Self::Value(format!(
-            "{} and {} cannot be evaluated with {}",
-            lhs, rhs, op
-        )))
-    }
-
-    pub fn undefined<T>(var: &str) -> Res<T> {
-        Err(Self::Value(format!("{} is undefined", var)))
-    }
-
-    pub fn lexing_custom<T>(msg: impl fmt::Display) -> Res<T> {
+    pub fn lexing<T>(msg: impl fmt::Display) -> Res<T> {
         Err(Self::Lexing(msg.to_string()))
     }
 
-    pub fn parsing_custom<T>(msg: impl fmt::Display) -> Res<T> {
+    pub fn parsing<T>(msg: impl fmt::Display) -> Res<T> {
         Err(Self::Parsing(msg.to_string()))
     }
 
-    pub fn value_custom<T>(msg: impl fmt::Display) -> Res<T> {
-        Err(Self::Value(msg.to_string()))
-    }
-
-    pub fn run_custom<T>(msg: impl fmt::Display) -> Res<T> {
-        Err(Self::Vm(msg.to_string()))
-    }
-
-    pub fn compile_custom<T>(msg: impl fmt::Display) -> Res<T> {
+    pub fn compile<T>(msg: impl fmt::Display) -> Res<T> {
         Err(Self::Compile(msg.to_string()))
     }
 }
@@ -80,8 +33,7 @@ impl fmt::Display for Error {
         match self {
             Error::Lexing(e) => write!(f, "lexing: {}", e),
             Error::Parsing(e) => write!(f, "parsing: {}", e),
-            Error::Value(e) => write!(f, "evaluation: {}", e),
-            Error::Vm(e) => write!(f, "vm: {}", e),
+            Error::Eval(e) => write!(f, "eval: {}", e),
             Error::Compile(e) => write!(f, "compilation: {}", e),
         }
     }

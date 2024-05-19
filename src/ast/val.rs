@@ -24,7 +24,7 @@ impl Value {
             Token::Int(i) => Ok(Val::Int(i)),
             Token::Lbracket => Self::parse_array(tokens),
             Token::Function => Self::parse_function(tokens),
-            t => Error::parsing_custom(format!("saw '{}', expected a value", t))?,
+            t => Error::parsing(format!("saw '{}', expected a value", t))?,
         }
     }
 
@@ -52,8 +52,8 @@ impl Value {
         )?;
         match def.last() {
             Some(Stmt::Expr(_)) => Ok(Self::Function(args, Vec::new(), def)),
-            Some(s) => Error::parsing_custom(format!("saw '{}', expected an expression", s)),
-            None => Error::parsing_custom("expected an expression"),
+            Some(s) => Error::parsing(format!("saw '{}', expected an expression", s)),
+            None => Error::parsing("expected an expression"),
         }
     }
 }
@@ -61,8 +61,8 @@ impl Value {
 fn parse_ident(tokens: &mut Tokens) -> Res<String> {
     match tokens.next() {
         Some(Token::Ident(s)) => Ok(s),
-        Some(t) => Error::parsing_custom(format!("saw '{}', expected an identifier", t)),
-        None => Error::parsing_custom("expected an identifier"),
+        Some(t) => Error::parsing(format!("saw '{}', expected an identifier", t)),
+        None => Error::parsing("expected an identifier"),
     }
 }
 

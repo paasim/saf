@@ -75,7 +75,7 @@ impl Iterator for Bytecode {
 fn get_u8(it: &mut vec::IntoIter<u8>, op: &str) -> Res<u8> {
     match it.next() {
         Some(it) => Ok(it),
-        None => Error::run_custom(format!("expected operand for {}", op)),
+        None => Error::eval(format!("expected operand for {}", op)),
     }
 }
 
@@ -116,7 +116,7 @@ impl Instruction {
             23 => Ok(Self::BinOp(BinOp::Plus)),
             24 => Ok(Self::BinOp(BinOp::Div)),
             25 => Ok(Self::BinOp(BinOp::Mult)),
-            b => Error::run_custom(format!("unknown opcode {}", b)),
+            b => Error::eval(format!("unknown opcode {}", b)),
         };
         Some(instr)
     }
@@ -124,7 +124,7 @@ impl Instruction {
     pub fn ser(it: &mut vec::IntoIter<u8>) -> Res<Self> {
         match Self::ser_opt(it) {
             Some(v) => v,
-            None => Error::run_custom("unexpected end of input"),
+            None => Error::eval("unexpected end of input"),
         }
     }
 

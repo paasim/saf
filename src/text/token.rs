@@ -84,14 +84,16 @@ impl fmt::Display for Token {
 pub fn expect_token(tokens: &mut impl Iterator<Item = Token>, t: &Token) -> Res<Token> {
     match tokens.next() {
         Some(t_) if t == &t_ => Ok(t_),
-        opt => Error::parsing(opt.as_ref(), vec![t]),
+
+        Some(t_) => Error::parsing(format!("expected '{}', saw '{}'", t, t_)),
+        None => Error::lexing(format!("expected '{}'", t)),
     }
 }
 
 pub fn next_token(tokens: &mut Tokens, exp: &str) -> Res<Token> {
     match tokens.next() {
         Some(t) => Ok(t),
-        None => Error::parsing_custom(format!("expected '{}'", exp)),
+        None => Error::parsing(format!("expected '{}'", exp)),
     }
 }
 
@@ -129,7 +131,7 @@ impl Token {
             '0'..='9' => Self::scan_digit(c, chars),
             'A'..='Z' => Ok(Self::scan_ident(c, chars)),
             'a'..='z' => Ok(Self::scan_ident(c, chars)),
-            _ => Error::lexing(Some(c), vec![]),
+            _ => Error::lexing(format!("unexpected '{}'", c)),
         }
     }
 
@@ -162,7 +164,8 @@ impl Token {
         let s = scan_seq(None, chars, |c| c.is_ascii_alphanumeric() || *c != '"');
         match chars.next() {
             Some('"') => Ok(Self::String(s)),
-            c => Error::lexing(c, vec!['"']),
+            Some(c) => Error::lexing(format!("expected '\"', saw '{}'", c)),
+            None => Error::lexing("expected '\"'"),
         }
     }
 }

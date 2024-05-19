@@ -52,7 +52,7 @@ impl Expr {
             Token::False => Ok(Self::Value(Val::Bool(false))),
             Token::Int(i) => Ok(Self::Value(Val::Int(i))),
             Token::Lbracket => Val::parse_array(tokens).map(Self::Value),
-            t => Error::parsing_custom(format!("saw '{}', expected an expression", t)),
+            t => Error::parsing(format!("saw '{}', expected an expression", t)),
         }?;
         while e.add_call(tokens)? {}
         e.add_cond(tokens)?;

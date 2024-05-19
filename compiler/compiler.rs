@@ -36,7 +36,7 @@ impl Compiler {
     fn get_const(&self, c: &CValue) -> Res<u16> {
         match self.constants.get(c) {
             Some(ind) => Ok(*ind),
-            None => Error::compile_custom(format!("constant {} not defined", c)),
+            None => Error::compile(format!("constant {} not defined", c)),
         }
     }
 
@@ -52,7 +52,7 @@ impl Compiler {
     fn resolve_sym(&self, sym: &str) -> Res<u16> {
         match self.symbols.get(sym).copied() {
             Some(s) => Ok(s),
-            None => Error::compile_custom(format!("symbol {} not defined", sym)),
+            None => Error::compile(format!("symbol {} not defined", sym)),
         }
     }
 
@@ -144,7 +144,7 @@ impl Compiler {
         match self.instructions.get_mut(pos) {
             Some(Instruction::JumpIfNot(v)) => *v = val.to_be_bytes(),
             Some(Instruction::Jump(v)) => *v = val.to_be_bytes(),
-            _ => Error::compile_custom("expected jump if")?,
+            _ => Error::compile("expected jump if")?,
         };
         Ok(())
     }

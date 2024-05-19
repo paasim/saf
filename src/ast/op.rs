@@ -37,10 +37,7 @@ impl TryFrom<Token> for UnOp {
             Token::Or => Ok(Self::Negation),
             Token::Len => Ok(Self::Len),
             Token::TypeOf => Ok(Self::TypeOf),
-            t => Error::parsing(
-                Some(t),
-                vec![Token::Minus, Token::Negation, Token::Len, Token::TypeOf],
-            ),
+            t => Error::parsing(format!("saw '{}', expected a unary op", t)),
         }
     }
 }
@@ -56,7 +53,7 @@ impl UnOp {
             (UnOp::Negation, Val::Bool(b)) => Ok(Val::Bool(!b)),
             (UnOp::Pop, Val::Array(v)) => match v.last() {
                 Some(v) => Ok(v.clone()),
-                None => Error::value_custom("trying to pop from an empty array"),
+                None => Error::eval("trying to pop from an empty array"),
             },
             (UnOp::Init, Val::Array(mut v)) => {
                 v.pop();
@@ -69,7 +66,7 @@ impl UnOp {
             (UnOp::TypeOf, Val::Int(_)) => Ok(Val::String(String::from("int"))),
             (UnOp::TypeOf, Val::Array(_)) => Ok(Val::String(String::from("array"))),
             (UnOp::TypeOf, Val::Function(_, _, _)) => Ok(Val::String(String::from("function"))),
-            (op, v) => Error::unop(op, &v),
+            (op, v) => Error::eval(format!("{} cannot be evaluated with {}", v, op)),
         }
     }
 }
@@ -165,7 +162,7 @@ impl BinOp {
             (BinOp::NotEq, Val::Int(l), Val::Int(r)) => Ok(Val::Bool(l != r)),
             (BinOp::NotEq, Val::String(l), Val::String(r)) => Ok(Val::Bool(l != r)),
             (BinOp::NotEq, Val::Array(l), Val::Array(r)) => Ok(Val::Bool(l != r)),
-            (op, l, r) => Error::binop(&l, &r, op),
+            (op, l, r) => Error::eval(format!("{} and {} cannot be evaluated with {}", l, r, op)),
         }
     }
 }
@@ -185,21 +182,7 @@ impl TryFrom<Token> for BinOp {
             Token::NotEq => Ok(Self::NotEq),
             Token::Gt => Ok(Self::Gt),
             Token::Lt => Ok(Self::Lt),
-            t => Error::parsing(
-                Some(t),
-                vec![
-                    Token::And,
-                    Token::Or,
-                    Token::Plus,
-                    Token::Minus,
-                    Token::Mult,
-                    Token::Div,
-                    Token::Eq,
-                    Token::NotEq,
-                    Token::Gt,
-                    Token::Lt,
-                ],
-            ),
+            t => Error::parsing(format!("saw '{}', expected a binary op", t)),
         }
     }
 }
