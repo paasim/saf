@@ -42,41 +42,6 @@ pub enum Token {
     False,
 }
 
-impl fmt::Display for Token {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Ident(v) => write!(f, "{}", v),
-            Self::Int(i) => write!(f, "{}", i),
-            Self::String(s) => write!(f, "{}", s),
-            Self::Assign => write!(f, "="),
-            Self::And => write!(f, "&"),
-            Self::Or => write!(f, "|"),
-            Self::Plus => write!(f, "+"),
-            Self::Minus => write!(f, "-"),
-            Self::Negation => write!(f, "!"),
-            Self::Mult => write!(f, "*"),
-            Self::Div => write!(f, "/"),
-            Self::Eq => write!(f, "=="),
-            Self::NotEq => write!(f, "!="),
-            Self::Gt => write!(f, ">"),
-            Self::Lt => write!(f, "<"),
-            Self::Cond => write!(f, "?"),
-            Self::Colon => write!(f, ":"),
-            Self::Comma => write!(f, ","),
-            Self::Semicolon => write!(f, ";"),
-            Self::Lparen => write!(f, "("),
-            Self::Rparen => write!(f, ")"),
-            Self::Lbracket => write!(f, "["),
-            Self::Rbracket => write!(f, "]"),
-            Self::Lbrace => write!(f, "{{"),
-            Self::Rbrace => write!(f, "}}"),
-            Self::Function => write!(f, "fn"),
-            Self::True => write!(f, "true"),
-            Self::False => write!(f, "false"),
-        }
-    }
-}
-
 pub fn expect_token(tokens: &mut impl Iterator<Item = Token>, t: &Token) -> Res<Token> {
     match tokens.next() {
         Some(t_) if t == &t_ => Ok(t_),
@@ -93,12 +58,20 @@ pub fn next_token(tokens: &mut Tokens, exp: &str) -> Res<Token> {
     }
 }
 
+pub fn expect_ident(tokens: &mut Tokens) -> Res<String> {
+    match tokens.next() {
+        Some(Token::Ident(s)) => Ok(s),
+        Some(t) => Error::parsing(format!("expected an identifier, saw '{}'", t)),
+        None => Error::parsing("expected an identifier"),
+    }
+}
+
 impl Token {
     pub fn scan_opt(chars: &mut Chars) -> Option<Res<Self>> {
         chars.next().map(|c| Self::scan_next(c, chars))
     }
 
-    pub fn scan_next(c: char, chars: &mut Chars) -> Res<Self> {
+    fn scan_next(c: char, chars: &mut Chars) -> Res<Self> {
         match c {
             '=' => Ok(Self::scan_equal(chars)),
             '!' => Ok(Self::scan_bang(chars)),
@@ -170,6 +143,41 @@ fn scan_seq(c: Option<char>, chars: &mut Chars, f: impl Fn(&char) -> bool) -> St
         s.push(c);
     }
     String::from_iter(s)
+}
+
+impl fmt::Display for Token {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Ident(v) => write!(f, "{}", v),
+            Self::Int(i) => write!(f, "{}", i),
+            Self::String(s) => write!(f, "{}", s),
+            Self::Assign => write!(f, "="),
+            Self::And => write!(f, "&"),
+            Self::Or => write!(f, "|"),
+            Self::Plus => write!(f, "+"),
+            Self::Minus => write!(f, "-"),
+            Self::Negation => write!(f, "!"),
+            Self::Mult => write!(f, "*"),
+            Self::Div => write!(f, "/"),
+            Self::Eq => write!(f, "=="),
+            Self::NotEq => write!(f, "!="),
+            Self::Gt => write!(f, ">"),
+            Self::Lt => write!(f, "<"),
+            Self::Cond => write!(f, "?"),
+            Self::Colon => write!(f, ":"),
+            Self::Comma => write!(f, ","),
+            Self::Semicolon => write!(f, ";"),
+            Self::Lparen => write!(f, "("),
+            Self::Rparen => write!(f, ")"),
+            Self::Lbracket => write!(f, "["),
+            Self::Rbracket => write!(f, "]"),
+            Self::Lbrace => write!(f, "{{"),
+            Self::Rbrace => write!(f, "}}"),
+            Self::Function => write!(f, "fn"),
+            Self::True => write!(f, "true"),
+            Self::False => write!(f, "false"),
+        }
+    }
 }
 
 #[cfg(test)]

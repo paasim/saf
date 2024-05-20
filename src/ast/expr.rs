@@ -1,68 +1,42 @@
+use super::op::{token_is_binop, token_is_unop};
 use super::parse::parse_sep;
-use super::{fmt_vec, BinOp, UnOp, Val, Value};
+use super::val::token_starts_value;
+use super::{fmt_vec, BinOp, UnOp, Value};
 use crate::err::{Error, Res};
 use crate::text::{expect_token, next_token, Token, Tokens};
 use std::{fmt, mem};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Expr {
-    Call(Box<Expr>, Vec<Expr>),
-    Cond(Box<Expr>, Box<Expr>, Box<Expr>),
-    Binary(Box<Expr>, BinOp, Box<Expr>),
-    Unary(UnOp, Box<Expr>),
-    Ident(String),
     Value(Value),
-}
-
-impl fmt::Display for Expr {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Expr::Call(ident, args) => {
-                let args = fmt_vec(args, ", ");
-                write!(f, "{}({})", ident, args)
-            }
-            Expr::Cond(c, t, fa) => write!(f, "{} ? {} : {}", c, t, fa),
-            Expr::Binary(l, o, r) => write!(f, "{} {} {}", l, o, r),
-            Expr::Unary(UnOp::Paren, e) => write!(f, "({})", e),
-            Expr::Unary(o, e) => write!(f, "{}{}", o, e),
-            Expr::Ident(i) => write!(f, "{}", i),
-            Expr::Value(v) => write!(f, "{}", v),
-        }
-    }
+    Ident(String),
+    Unary(UnOp, Box<Expr>),
+    Binary(Box<Expr>, BinOp, Box<Expr>),
+    Cond(Box<Expr>, Box<Expr>, Box<Expr>),
+    Call(Box<Expr>, Vec<Expr>),
 }
 
 impl Expr {
     pub fn parse(tokens: &mut Tokens) -> Res<Self> {
         let mut e = match next_token(tokens, "an expression")? {
             Token::Ident(ident) => Ok(Self::Ident(ident)),
-            Token::String(s) => Ok(Self::Value(Val::String(s))),
-            Token::True => Ok(Self::Value(Val::Bool(true))),
-            Token::False => Ok(Self::Value(Val::Bool(false))),
-            Token::Int(i) => Ok(Self::Value(Val::Int(i))),
-            Token::Lparen => {
-                let e = Self::parse_unary(UnOp::Paren, tokens)?;
-                expect_token(tokens, &Token::Rparen)?;
-                Ok(e)
-            }
-            Token::Minus => Self::parse_unary(UnOp::Minus, tokens),
-            Token::Negation => Self::parse_unary(UnOp::Negation, tokens),
-            Token::Lt => Self::parse_unary(UnOp::Init, tokens),
-            Token::Function => Val::parse_function(tokens).map(Self::Value),
-            Token::Lbracket => Val::parse_array(tokens).map(Self::Value),
+            t if token_is_unop(&t) => Self::parse_unary(UnOp::try_from(t)?, tokens),
+            t if token_starts_value(&t) => Value::parse_with(t, tokens).map(Self::Value),
             t => Error::parsing(format!("saw '{}', expected an expression", t)),
         }?;
         while e.add_call(tokens)? {}
         e.add_cond(tokens)?;
-        if let Some(t) = tokens.next_if(BinOp::is_binop) {
-            let op = BinOp::try_from(t)?;
-            let rhs = Self::parse(tokens)?;
-            e = Self::mk_binary(e, op, rhs);
+        if let Some(t) = tokens.next_if(token_is_binop) {
+            e = Self::mk_binary(e, BinOp::try_from(t)?, Self::parse(tokens)?);
         };
         Ok(e)
     }
 
     fn parse_unary(op: UnOp, tokens: &mut Tokens) -> Res<Self> {
         let e = Self::parse(tokens)?;
+        if let UnOp::Paren = op {
+            expect_token(tokens, &Token::Rparen)?;
+        }
         e.mk_unary(op)
     }
 
@@ -74,20 +48,6 @@ impl Expr {
             Expr::Cond(c, t, f) => Ok(Expr::Cond(Box::new(c.mk_unary(op)?), t, f)),
             Expr::Binary(l, o, r) => Ok(Expr::Binary(Box::new(l.mk_unary(op)?), o, r)),
             e => Ok(Self::Unary(op, Box::new(e))),
-        }
-    }
-
-    fn mk_binary(lhs: Self, op: BinOp, rhs: Self) -> Self {
-        match rhs {
-            Self::Cond(cond, true_, false_) => {
-                let cond = Box::new(Self::mk_binary(lhs, op, *cond));
-                Self::Cond(cond, true_, false_)
-            }
-            Self::Binary(mid, op2, rhs) if op >= op2 => {
-                let lhs = Box::new(Self::mk_binary(lhs, op, *mid));
-                Self::Binary(lhs, op2, rhs)
-            }
-            e => Self::Binary(Box::new(lhs), op, Box::new(e)),
         }
     }
 
@@ -117,6 +77,37 @@ impl Expr {
             );
         }
         Ok(())
+    }
+
+    fn mk_binary(lhs: Self, op: BinOp, rhs: Self) -> Self {
+        match rhs {
+            Self::Cond(cond, true_, false_) => {
+                let cond = Box::new(Self::mk_binary(lhs, op, *cond));
+                Self::Cond(cond, true_, false_)
+            }
+            Self::Binary(mid, op2, rhs) if op >= op2 => {
+                let lhs = Box::new(Self::mk_binary(lhs, op, *mid));
+                Self::Binary(lhs, op2, rhs)
+            }
+            e => Self::Binary(Box::new(lhs), op, Box::new(e)),
+        }
+    }
+}
+
+impl fmt::Display for Expr {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Expr::Value(v) => write!(f, "{}", v),
+            Expr::Ident(i) => write!(f, "{}", i),
+            Expr::Unary(UnOp::Paren, e) => write!(f, "{}{})", UnOp::Paren, e),
+            Expr::Unary(o, e) => write!(f, "{}{}", o, e),
+            Expr::Binary(l, o, r) => write!(f, "{} {} {}", l, o, r),
+            Expr::Cond(c, t, fa) => write!(f, "{} ? {} : {}", c, t, fa),
+            Expr::Call(ident, args) => {
+                let args = fmt_vec(args, ", ");
+                write!(f, "{}({})", ident, args)
+            }
+        }
     }
 }
 

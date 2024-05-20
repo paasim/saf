@@ -9,7 +9,7 @@ pub struct Env<'a> {
 }
 
 impl<'a> Env<'a> {
-    pub fn insert(&mut self, k: String, v: Value) -> Option<Value> {
+    fn insert_var(&mut self, k: String, v: Value) -> Option<Value> {
         self.vars.insert(k, v)
     }
 
@@ -20,25 +20,37 @@ impl<'a> Env<'a> {
         }
     }
 
-    pub fn get(&self, k: &str) -> Res<Value> {
+    fn get_var(&self, k: &str) -> Res<&Value> {
         match self.get_opt(k) {
-            Some(v) => Ok(v.clone()),
+            Some(v) => Ok(v),
             None => Error::eval(format!("{} is undefined", k)),
         }
     }
 
-    pub fn eval_expr(&self, expr: Expr) -> Res<Value> {
+    pub fn eval_stmts(&mut self, stmts: Vec<Stmt>) -> Res<Option<Value>> {
+        let last = stmts.into_iter().map(|stmt| self.eval_stmt(stmt)).last();
+        last.transpose().map(|v| v.flatten())
+    }
+
+    fn eval_stmt(&mut self, stmt: Stmt) -> Res<Option<Value>> {
+        match stmt {
+            Stmt::Let(ident, e) => Ok(self.insert_var(ident, self.eval_expr(e)?)),
+            Stmt::Expr(e) => self.eval_expr(e).map(Some),
+        }
+    }
+
+    fn eval_expr(&self, expr: Expr) -> Res<Value> {
         match expr {
-            Expr::Call(e, args) => self.eval_call(*e, args),
+            Expr::Value(v) => Ok(v),
+            Expr::Ident(ident) => self.get_var(&ident).cloned(),
+            Expr::Unary(op, e) => self.eval_expr(*e).and_then(|v| op.eval(v)),
+            Expr::Binary(lhs, op, rhs) => op.eval(self.eval_expr(*lhs)?, self.eval_expr(*rhs)?),
             Expr::Cond(cond, true_, false_) => match self.eval_expr(*cond)? {
                 Val::Bool(true) => self.eval_expr(*true_),
                 Val::Bool(false) => self.eval_expr(*false_),
                 e => Error::eval(format!("condition '{}' is not boolean", e)),
             },
-            Expr::Binary(lhs, op, rhs) => op.eval(self.eval_expr(*lhs)?, self.eval_expr(*rhs)?),
-            Expr::Unary(op, e) => self.eval_expr(*e).and_then(|v| op.eval(v)),
-            Expr::Ident(ident) => self.get(&ident),
-            Expr::Value(v) => Ok(v),
+            Expr::Call(e, args) => self.eval_call(*e, args),
         }
     }
 
@@ -57,33 +69,13 @@ impl<'a> Env<'a> {
             .map(|(arg, par)| Ok((par, self.eval_expr(arg)?)))
             .collect::<Res<Vec<_>>>()?;
         defs.extend(new_defs);
-        if !params_rest.is_empty() {
-            return Ok(Val::Function(params_rest, defs, stmts));
-        }
-        self.eval_within_subenv(defs.into_iter().collect(), stmts)
-    }
-
-    pub fn eval_stmt(&mut self, stmt: Stmt) -> Res<Option<Value>> {
-        match stmt {
-            Stmt::Let(ident, e) => {
-                let v = self.eval_expr(e)?;
-                self.insert(ident, v);
-                Ok(None)
-            }
-            Stmt::Expr(e) => self.eval_expr(e).map(Some),
+        match params_rest.is_empty() {
+            true => self.eval_within_subenv(defs.into_iter().collect(), stmts),
+            false => Ok(Val::Function(params_rest, defs, stmts)),
         }
     }
 
-    pub fn eval_stmts(&mut self, stmts: Vec<Stmt>) -> Res<Option<Value>> {
-        let last = stmts.into_iter().map(|stmt| self.eval_stmt(stmt)).last();
-        last.transpose().map(|v| v.flatten())
-    }
-
-    pub fn eval_within_subenv(
-        &'a self,
-        vars: HashMap<String, Value>,
-        stmts: Vec<Stmt>,
-    ) -> Res<Value> {
+    fn eval_within_subenv(&'a self, vars: HashMap<String, Value>, stmts: Vec<Stmt>) -> Res<Value> {
         let mut env = Self {
             vars,
             parent: Some(self),

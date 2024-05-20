@@ -44,15 +44,6 @@ pub struct Bytecode {
     state: State,
 }
 
-impl From<Vec<u8>> for Bytecode {
-    fn from(v: Vec<u8>) -> Self {
-        Self {
-            bytes: v.into_iter(),
-            state: State::New,
-        }
-    }
-}
-
 impl Bytecode {
     fn next(&mut self) -> Res<u8> {
         match self.bytes.next() {
@@ -167,7 +158,7 @@ impl Bytecode {
     }
 }
 
-pub fn to_bytecode(constants: &HashMap<CValue, u16>, instructions: &[Instruction]) -> Vec<u8> {
+pub fn ser_to_bytecode(constants: &HashMap<CValue, u16>, instructions: &[Instruction]) -> Vec<u8> {
     let mut buf = vec![BYTECODE_VERSION];
     ser_constants(&mut buf, constants);
     ser_instructions(&mut buf, instructions);
@@ -239,6 +230,15 @@ fn extend_with_vec<T>(buf: &mut Vec<u8>, v: &[T], f: fn(&mut Vec<u8>, &T)) {
     v.iter().for_each(|t| f(buf, t));
 }
 
+impl From<Vec<u8>> for Bytecode {
+    fn from(v: Vec<u8>) -> Self {
+        Self {
+            bytes: v.into_iter(),
+            state: State::New,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -246,7 +246,7 @@ mod tests {
 
     #[test]
     fn empty_to_bytecode() {
-        let btc = to_bytecode(&HashMap::new(), &Vec::new());
+        let btc = ser_to_bytecode(&HashMap::new(), &Vec::new());
         assert_eq!(btc, [0; 1 + 8 + 8]);
         let btc = add_symbols(btc, &HashMap::new());
         assert_eq!(btc, [0; 1 + 8 + 8 + 8]);
@@ -265,7 +265,7 @@ mod tests {
         let symbols_arr = [(String::from("s1"), 0)];
         let symbols_exp: Vec<_> = symbols_arr.iter().cloned().map(|(v, _)| v).collect();
 
-        let bytes = to_bytecode(&HashMap::from(consts_arr), &instrs_exp);
+        let bytes = ser_to_bytecode(&HashMap::from(consts_arr), &instrs_exp);
         // reversed so that first instr is on top of stack for the vm
         instrs_exp.reverse();
         let mut btc = Bytecode::from(bytes.clone());

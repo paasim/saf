@@ -11,22 +11,8 @@ pub enum UnOp {
     Init,
 }
 
-impl fmt::Display for UnOp {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Paren => write!(f, ""), // () handled by expr
-            Self::Minus => write!(f, "-"),
-            Self::Negation => write!(f, "!"),
-            Self::Init => write!(f, "<"),
-        }
-    }
-}
-
 impl UnOp {
-    pub fn eval<S: Clone + fmt::Display, T: Clone + fmt::Display>(
-        &self,
-        v: Val<S, T>,
-    ) -> Res<Val<S, T>> {
+    pub fn eval<S: fmt::Display, T: fmt::Display>(&self, v: Val<S, T>) -> Res<Val<S, T>> {
         match (self, v) {
             (UnOp::Paren, v) => Ok(v),
             (UnOp::Minus, Val::Int(i)) => Ok(Val::Int(-i)),
@@ -45,6 +31,44 @@ impl UnOp {
     }
 }
 
+pub fn token_is_unop(t: &Token) -> bool {
+    matches!(
+        t,
+        Token::Lparen | Token::Minus | Token::Negation | Token::Lt
+    )
+}
+
+impl TryFrom<Token> for UnOp {
+    type Error = Error;
+
+    fn try_from(t: Token) -> Res<Self> {
+        match t {
+            Token::Lparen => Ok(Self::Paren),
+            Token::Minus => Ok(Self::Minus),
+            Token::Negation => Ok(Self::Negation),
+            Token::Lt => Ok(Self::Init),
+            t => Error::parsing(format!("saw '{}', expected an unary op", t)),
+        }
+    }
+}
+
+impl From<&UnOp> for Token {
+    fn from(op: &UnOp) -> Self {
+        match op {
+            UnOp::Paren => Self::Lparen,
+            UnOp::Minus => Self::Minus,
+            UnOp::Negation => Self::Negation,
+            UnOp::Init => Self::Lt,
+        }
+    }
+}
+
+impl fmt::Display for UnOp {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", Token::from(self))
+    }
+}
+
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum BinOp {
     Or,
@@ -57,12 +81,6 @@ pub enum BinOp {
     Plus,
     Div,
     Mult,
-}
-
-impl fmt::Display for BinOp {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", Token::from(self))
-    }
 }
 
 // order of evaluation
@@ -92,23 +110,23 @@ impl PartialOrd for BinOp {
     }
 }
 
-impl BinOp {
-    pub fn is_binop(t: &Token) -> bool {
-        matches!(
-            t,
-            Token::And
-                | Token::Or
-                | Token::Plus
-                | Token::Minus
-                | Token::Mult
-                | Token::Div
-                | Token::Eq
-                | Token::NotEq
-                | Token::Gt
-                | Token::Lt
-        )
-    }
+pub fn token_is_binop(t: &Token) -> bool {
+    matches!(
+        t,
+        Token::And
+            | Token::Or
+            | Token::Plus
+            | Token::Minus
+            | Token::Mult
+            | Token::Div
+            | Token::Eq
+            | Token::NotEq
+            | Token::Gt
+            | Token::Lt
+    )
+}
 
+impl BinOp {
     pub fn eval<S: fmt::Display + cmp::PartialEq, T: fmt::Display + cmp::PartialEq>(
         &self,
         lhs: Val<S, T>,
@@ -175,6 +193,12 @@ impl From<&BinOp> for Token {
             BinOp::Gt => Self::Gt,
             BinOp::Lt => Self::Lt,
         }
+    }
+}
+
+impl fmt::Display for BinOp {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", Token::from(self))
     }
 }
 

@@ -9,16 +9,6 @@ pub enum Stmt {
     Expr(Expr),
 }
 
-impl fmt::Display for Stmt {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Let(s, e) => write!(f, "{} = {};", s, e),
-
-            Self::Expr(e) => write!(f, "{};", e),
-        }
-    }
-}
-
 pub fn parse_assignment_rhs(tokens: &mut Tokens) -> Res<Option<Expr>> {
     if tokens.next_if(|t| t == &Token::Assign).is_none() {
         return Ok(None);
@@ -49,6 +39,15 @@ impl Stmt {
         match parse_assignment_rhs(tokens)? {
             Some(rhs) => Ok(Self::Let(ident, rhs)),
             None => Ok(Self::Expr(Expr::Ident(ident))),
+        }
+    }
+}
+
+impl fmt::Display for Stmt {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Let(s, e) => write!(f, "{} = {};", s, e),
+            Self::Expr(e) => write!(f, "{};", e),
         }
     }
 }

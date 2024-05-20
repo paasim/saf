@@ -1,6 +1,6 @@
 use super::instruction::Instruction;
-use crate::bytecode::{add_symbols, to_bytecode};
-use saf::ast::{Expr, Stmt, Val, Value};
+use crate::bytecode::{add_symbols, ser_to_bytecode};
+use saf::ast::{BinOp, Expr, Stmt, Val, Value};
 use saf::err::{Error, Res};
 use std::collections::HashMap;
 use std::fmt;
@@ -15,7 +15,7 @@ pub struct Compiler {
 }
 
 impl Compiler {
-    pub fn add_instr(&mut self, instr: Instruction) -> usize {
+    fn add_instr(&mut self, instr: Instruction) -> usize {
         self.instructions.push(instr);
         1
     }
@@ -24,7 +24,7 @@ impl Compiler {
         self.instructions.clear()
     }
 
-    pub fn add_const(&mut self, val: CValue) -> u16 {
+    fn add_const(&mut self, val: CValue) -> u16 {
         if let Ok(v) = self.get_const(&val) {
             return v;
         }
@@ -56,7 +56,33 @@ impl Compiler {
         }
     }
 
-    pub fn add_val(&mut self, v: Value) -> Res<usize> {
+    pub fn add_stmts(&mut self, stmts: Vec<Stmt>) -> Res<usize> {
+        stmts.into_iter().map(|s| self.add_stmt(s)).sum()
+    }
+
+    fn add_stmt(&mut self, s: Stmt) -> Res<usize> {
+        match s {
+            Stmt::Let(s, e) => {
+                let we = self.add_expr(e)?;
+                let sym = self.add_sym(s).to_be_bytes();
+                Ok(we + self.add_instr(Instruction::SetVar(sym)))
+            }
+            Stmt::Expr(e) => self.add_expr(e),
+        }
+    }
+
+    fn add_expr(&mut self, e: Expr) -> Res<usize> {
+        match e {
+            Expr::Value(v) => self.add_val(v),
+            Expr::Ident(s) => Ok(self.add_ident(s)),
+            Expr::Unary(op, e) => Ok(self.add_expr(*e)? + self.add_instr(Instruction::UnOp(op))),
+            Expr::Binary(lhs, op, rhs) => self.add_binary(*lhs, op, *rhs),
+            Expr::Cond(cond, true_, false_) => self.add_cond(*cond, *true_, *false_),
+            Expr::Call(e, args) => self.add_call(*e, args),
+        }
+    }
+
+    fn add_val(&mut self, v: Value) -> Res<usize> {
         match v {
             Val::Bool(b) => Ok(self.add_instr(Instruction::Bool(b))),
             Val::String(_) | Val::Int(_) | Val::Array(_) | Val::Function(_, _, _) => {
@@ -72,13 +98,14 @@ impl Compiler {
             Val::Bool(b) => Ok(Val::Bool(b)),
             Val::Int(i) => Ok(Val::Int(i)),
             Val::String(s) => Ok(Val::String(s)),
-            Val::Array(a) => a
-                .into_iter()
-                .map(|t| self.compile_val(t))
-                .collect::<Res<_>>()
-                .map(Val::Array),
+            Val::Array(a) => self.compile_vals(a),
             Val::Function(pars, defs, stmts) => self.add_func(pars, defs, stmts),
         }
+    }
+
+    fn compile_vals(&mut self, v: Vec<Value>) -> Res<CValue> {
+        let cvals = v.into_iter().map(|t| self.compile_val(t));
+        Ok(Val::Array(cvals.collect::<Res<_>>()?))
     }
 
     fn add_func(
@@ -102,28 +129,13 @@ impl Compiler {
         Ok(CValue::Function(pars, defs, stmts))
     }
 
-    fn add_expr(&mut self, e: Expr) -> Res<usize> {
-        match e {
-            Expr::Call(e, args) => {
-                let args_len = args.len();
-                Ok(args
-                    .into_iter()
-                    .map(|a| self.add_expr(a))
-                    .sum::<Res<usize>>()?
-                    + self.add_expr(*e)?
-                    + self.add_instr(Instruction::Call([args_len as u8])))
-            }
-            Expr::Cond(cond, true_, false_) => self.add_cond(*cond, *true_, *false_),
-            Expr::Binary(lhs, op, rhs) => Ok(self.add_expr(*rhs)?
-                + self.add_expr(*lhs)?
-                + self.add_instr(Instruction::BinOp(op))),
-            Expr::Unary(op, e) => Ok(self.add_expr(*e)? + self.add_instr(Instruction::UnOp(op))),
-            Expr::Ident(s) => {
-                let sym = self.add_sym(s);
-                Ok(self.add_instr(Instruction::GetVar(sym.to_be_bytes())))
-            }
-            Expr::Value(v) => self.add_val(v),
-        }
+    fn add_ident(&mut self, s: String) -> usize {
+        let sym = self.add_sym(s);
+        self.add_instr(Instruction::GetVar(sym.to_be_bytes()))
+    }
+
+    fn add_binary(&mut self, lhs: Expr, op: BinOp, rhs: Expr) -> Res<usize> {
+        Ok(self.add_expr(rhs)? + self.add_expr(lhs)? + self.add_instr(Instruction::BinOp(op)))
     }
 
     fn add_cond(&mut self, cond: Expr, true_: Expr, false_: Expr) -> Res<usize> {
@@ -148,23 +160,19 @@ impl Compiler {
         };
         Ok(())
     }
-    pub fn add_stmts(&mut self, stmts: Vec<Stmt>) -> Res<usize> {
-        stmts.into_iter().map(|s| self.add_stmt(s)).sum()
+
+    fn add_call(&mut self, e: Expr, args: Vec<Expr>) -> Res<usize> {
+        let args_len = args.len();
+        Ok(args
+            .into_iter()
+            .map(|a| self.add_expr(a))
+            .sum::<Res<usize>>()?
+            + self.add_expr(e)?
+            + self.add_instr(Instruction::Call([args_len as u8])))
     }
 
-    pub fn add_stmt(&mut self, s: Stmt) -> Res<usize> {
-        match s {
-            Stmt::Let(s, e) => {
-                let we = self.add_expr(e)?;
-                let sym = self.add_sym(s).to_be_bytes();
-                Ok(we + self.add_instr(Instruction::SetVar(sym)))
-            }
-            Stmt::Expr(e) => self.add_expr(e),
-        }
-    }
-
-    pub fn bytecode(&self) -> Vec<u8> {
-        to_bytecode(&self.constants, &self.instructions)
+    fn bytecode(&self) -> Vec<u8> {
+        ser_to_bytecode(&self.constants, &self.instructions)
     }
 
     pub fn bytecode_with_symbols(&self) -> Vec<u8> {

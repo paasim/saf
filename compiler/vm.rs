@@ -8,29 +8,18 @@ use std::mem;
 #[derive(Debug, Default)]
 pub struct Vm {
     constants: Vec<CValue>,
-    instructions: Vec<Instruction>,
     stack: Vec<CValue>,
     variables: Vec<(u16, CValue)>,
+    instructions: Vec<Instruction>,
     symbols: Option<Vec<String>>,
 }
 
 impl Vm {
-    fn get_const(&self, ind: u16) -> Res<CValue> {
+    fn get_const(&self, ind: u16) -> Res<&CValue> {
         match self.constants.get(ind as usize) {
-            Some(v) => Ok(v.clone()),
+            Some(v) => Ok(v),
             None => Error::eval(format!("constant {} not found", ind)),
         }
-    }
-
-    fn next_instr(&mut self) -> Res<Instruction> {
-        match self.instructions.pop() {
-            Some(i) => Ok(i),
-            None => Error::eval("unexpected end of instructions"),
-        }
-    }
-
-    fn skip_instr(&mut self, n: usize) -> Res<()> {
-        (0..n).try_for_each(|_| self.next_instr().map(|_| ()))
     }
 
     fn stack_pop(&mut self) -> Res<CValue> {
@@ -40,9 +29,13 @@ impl Vm {
         }
     }
 
-    fn get_var(&mut self, ind: u16) -> Res<CValue> {
+    fn stack_push(&mut self, v: CValue) {
+        self.stack.push(v)
+    }
+
+    fn get_var(&mut self, ind: u16) -> Res<&CValue> {
         match self.variables.iter().rev().find(|(i, _)| *i == ind) {
-            Some((_, v)) => Ok(v.clone()),
+            Some((_, v)) => Ok(v),
             None => Error::eval(format!("{} is undefined", ind)),
         }
     }
@@ -56,15 +49,28 @@ impl Vm {
         Ok(())
     }
 
+    fn next_instr(&mut self) -> Res<Instruction> {
+        match self.instructions.pop() {
+            Some(i) => Ok(i),
+            None => Error::eval("unexpected end of instructions"),
+        }
+    }
+
+    fn skip_instr(&mut self, n: usize) -> Res<()> {
+        (0..n).try_for_each(|_| self.next_instr().map(|_| ()))
+    }
+
     fn run_instr(&mut self, i: Instruction) -> Res<()> {
         match i {
-            Instruction::Bool(b) => self.stack.push(CValue::Bool(b)),
+            Instruction::Bool(b) => self.stack_push(CValue::Bool(b)),
             Instruction::Constant(c) => self
                 .get_const(u16::from_be_bytes(c))
-                .map(|c| self.stack.push(c))?,
+                .cloned()
+                .map(|c| self.stack_push(c))?,
             Instruction::GetVar(c) => self
                 .get_var(u16::from_be_bytes(c))
-                .map(|v| self.stack.push(v))?,
+                .cloned()
+                .map(|v| self.stack_push(v))?,
             Instruction::SetVar(c) => self
                 .stack_pop()
                 .map(|v| self.set_var(u16::from_be_bytes(c), v))?,
@@ -76,11 +82,11 @@ impl Vm {
             },
             Instruction::UnOp(op) => {
                 let v = self.stack_pop()?;
-                self.stack.push(op.eval(v)?)
+                self.stack_push(op.eval(v)?)
             }
             Instruction::BinOp(op) => {
                 let (l, r) = (self.stack_pop()?, self.stack_pop()?);
-                self.stack.push(op.eval(l, r)?)
+                self.stack_push(op.eval(l, r)?)
             }
             Instruction::Call([n]) => self.run_call(n as usize)?,
             Instruction::ExitCall([n]) => self.clean_variables(n as usize)?,
@@ -136,23 +142,23 @@ impl Vm {
                 let vs: Vec<_> = arr.iter().map(|v| self.with_symbols(v)).collect();
                 format!("[{}]", vs.join(", "))
             }
-            Val::Function(pars, defs, _) => {
-                let pars = pars
-                    .iter()
-                    .map(|&i| syms[i as usize].as_str())
-                    .collect::<Vec<_>>();
-                let mut res = format!("fn({}) {{ ", pars.join(", "));
-                defs.iter().for_each(|(i, v)| {
-                    res.push_str(&syms[(*i) as usize]);
-                    res.push_str(" = ");
-                    res.push_str(&self.with_symbols(v));
-                    res.push_str("; ");
-                });
-                res.push_str("... }");
-                res
-            }
+            Val::Function(pars, defs, _) => self.func_with_symbols(syms, pars, defs),
             _ => val.to_string(),
         }
+    }
+
+    fn func_with_symbols(
+        &self,
+        syms: &[String],
+        pars: &[u16],
+        defs: &[(u16, Val<u16, Instruction>)],
+    ) -> String {
+        let pars: Vec<_> = pars.iter().map(|i| syms[*i as usize].as_str()).collect();
+        let defs: Vec<_> = defs
+            .iter()
+            .map(|(i, v)| format!("{} = {}", syms[*i as usize], self.with_symbols(v).as_str()))
+            .collect();
+        format!("fn({}) {{ {} ... }}", pars.join(", "), defs.join("; "))
     }
 }
 

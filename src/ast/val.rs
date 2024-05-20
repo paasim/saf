@@ -1,7 +1,7 @@
 use super::parse::parse_sep;
 use super::{fmt_vec, Expr, Stmt};
 use crate::err::{Error, Res};
-use crate::text::{expect_token, next_token, Token, Tokens};
+use crate::text::{expect_ident, expect_token, next_token, Token, Tokens};
 use std::fmt;
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
@@ -16,26 +16,30 @@ pub enum Val<S, T> {
 pub type Value = Val<String, Stmt>;
 
 impl Value {
-    pub fn parse(tokens: &mut Tokens) -> Res<Self> {
-        match next_token(tokens, "value")? {
-            Token::String(s) => Ok(Self::String(s)),
-            Token::True => Ok(Self::Bool(true)),
+    fn parse(tokens: &mut Tokens) -> Res<Self> {
+        next_token(tokens, "value").and_then(|t| Self::parse_with(t, tokens))
+    }
+
+    pub fn parse_with(t: Token, tokens: &mut Tokens) -> Res<Self> {
+        match t {
             Token::False => Ok(Self::Bool(false)),
+            Token::True => Ok(Self::Bool(true)),
             Token::Int(i) => Ok(Val::Int(i)),
+            Token::String(s) => Ok(Self::String(s)),
             Token::Lbracket => Self::parse_array(tokens),
             Token::Function => Self::parse_function(tokens),
             t => Error::parsing(format!("saw '{}', expected a value", t))?,
         }
     }
 
-    pub fn parse_array(tokens: &mut Tokens) -> Res<Self> {
+    fn parse_array(tokens: &mut Tokens) -> Res<Self> {
         let vals = parse_sep(Self::parse, &Token::Comma, &Token::Rbracket, tokens)?;
         Ok(Self::Array(vals))
     }
 
-    pub fn parse_function(tokens: &mut Tokens) -> Res<Self> {
+    fn parse_function(tokens: &mut Tokens) -> Res<Self> {
         expect_token(tokens, &Token::Lparen)?;
-        let args = parse_sep(parse_ident, &Token::Comma, &Token::Rparen, tokens)?;
+        let args = parse_sep(expect_ident, &Token::Comma, &Token::Rparen, tokens)?;
         match tokens.peek() {
             Some(Token::Lbrace) => {}
             _ => {
@@ -58,12 +62,16 @@ impl Value {
     }
 }
 
-fn parse_ident(tokens: &mut Tokens) -> Res<String> {
-    match tokens.next() {
-        Some(Token::Ident(s)) => Ok(s),
-        Some(t) => Error::parsing(format!("saw '{}', expected an identifier", t)),
-        None => Error::parsing("expected an identifier"),
-    }
+pub fn token_starts_value(t: &Token) -> bool {
+    matches!(
+        t,
+        Token::False
+            | Token::True
+            | Token::Int(_)
+            | Token::String(_)
+            | Token::Function
+            | Token::Lbracket
+    )
 }
 
 impl<S: fmt::Display, T: fmt::Display> fmt::Display for Val<S, T> {

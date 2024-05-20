@@ -16,41 +16,6 @@ pub enum Instruction {
     BinOp(BinOp),
 }
 
-impl fmt::Display for Instruction {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Constant(operands) => {
-                write!(f, "Constant {}", u16::from_be_bytes(*operands))
-            }
-            Self::GetVar(operands) => {
-                write!(f, "GetVar {}", u16::from_be_bytes(*operands))
-            }
-            Self::SetVar(operands) => {
-                write!(f, "SetVar {}", u16::from_be_bytes(*operands))
-            }
-            Self::Call(n) => write!(f, "Call {}", u8::from_be_bytes(*n)),
-            Self::ExitCall(n) => write!(f, "ExitCall {}", u8::from_be_bytes(*n)),
-            Self::Jump(n) => write!(f, "Jump {}", u16::from_be_bytes(*n)),
-            Self::JumpIfNot(n) => write!(f, "JumpIfNot {}", u16::from_be_bytes(*n)),
-            Self::Bool(b) => write!(f, "Bool {}", b),
-            Self::UnOp(UnOp::Paren) => write!(f, "Paren"),
-            Self::UnOp(UnOp::Minus) => write!(f, "Minus"),
-            Self::UnOp(UnOp::Negation) => write!(f, "Negation"),
-            Self::UnOp(UnOp::Init) => write!(f, "Init"),
-            Self::BinOp(BinOp::Or) => write!(f, "Or"),
-            Self::BinOp(BinOp::And) => write!(f, "And"),
-            Self::BinOp(BinOp::Lt) => write!(f, "Lt"),
-            Self::BinOp(BinOp::Gt) => write!(f, "Gt"),
-            Self::BinOp(BinOp::NotEq) => write!(f, "NotEq"),
-            Self::BinOp(BinOp::Eq) => write!(f, "Eq"),
-            Self::BinOp(BinOp::Minus) => write!(f, "Minus"),
-            Self::BinOp(BinOp::Plus) => write!(f, "Plus"),
-            Self::BinOp(BinOp::Div) => write!(f, "Div"),
-            Self::BinOp(BinOp::Mult) => write!(f, "Mult"),
-        }
-    }
-}
-
 fn get_u8(it: &mut vec::IntoIter<u8>, op: &str) -> Res<u8> {
     match it.next() {
         Some(it) => Ok(it),
@@ -63,7 +28,7 @@ fn get_u16(it: &mut vec::IntoIter<u8>, op: &str) -> Res<[u8; 2]> {
 }
 
 impl Instruction {
-    pub fn ser_opt(it: &mut vec::IntoIter<u8>) -> Option<Res<Self>> {
+    fn ser_opt(it: &mut vec::IntoIter<u8>) -> Option<Res<Self>> {
         let b = match it.next() {
             Some(b) => b,
             None => return None,
@@ -134,13 +99,42 @@ impl Instruction {
 
     pub fn operands(&self) -> &[u8] {
         match self {
-            Instruction::Constant(o)
-            | Instruction::SetVar(o)
-            | Instruction::GetVar(o)
-            | Instruction::Jump(o)
-            | Instruction::JumpIfNot(o) => o.as_ref(),
-            Instruction::Call(n) | Instruction::ExitCall(n) => n.as_ref(),
+            Instruction::Constant(ops)
+            | Instruction::SetVar(ops)
+            | Instruction::GetVar(ops)
+            | Instruction::Jump(ops)
+            | Instruction::JumpIfNot(ops) => ops.as_ref(),
+            Instruction::Call(ops) | Instruction::ExitCall(ops) => ops.as_ref(),
             _ => &[],
+        }
+    }
+}
+
+impl fmt::Display for Instruction {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Constant(ops) => write!(f, "Constant {}", u16::from_be_bytes(*ops)),
+            Self::GetVar(ops) => write!(f, "GetVar {}", u16::from_be_bytes(*ops)),
+            Self::SetVar(ops) => write!(f, "SetVar {}", u16::from_be_bytes(*ops)),
+            Self::Call(n) => write!(f, "Call {}", u8::from_be_bytes(*n)),
+            Self::ExitCall(n) => write!(f, "ExitCall {}", u8::from_be_bytes(*n)),
+            Self::Jump(n) => write!(f, "Jump {}", u16::from_be_bytes(*n)),
+            Self::JumpIfNot(n) => write!(f, "JumpIfNot {}", u16::from_be_bytes(*n)),
+            Self::Bool(b) => write!(f, "Bool {}", b),
+            Self::UnOp(UnOp::Paren) => write!(f, "Paren"),
+            Self::UnOp(UnOp::Minus) => write!(f, "Minus"),
+            Self::UnOp(UnOp::Negation) => write!(f, "Negation"),
+            Self::UnOp(UnOp::Init) => write!(f, "Init"),
+            Self::BinOp(BinOp::Or) => write!(f, "Or"),
+            Self::BinOp(BinOp::And) => write!(f, "And"),
+            Self::BinOp(BinOp::Lt) => write!(f, "Lt"),
+            Self::BinOp(BinOp::Gt) => write!(f, "Gt"),
+            Self::BinOp(BinOp::NotEq) => write!(f, "NotEq"),
+            Self::BinOp(BinOp::Eq) => write!(f, "Eq"),
+            Self::BinOp(BinOp::Minus) => write!(f, "Minus"),
+            Self::BinOp(BinOp::Plus) => write!(f, "Plus"),
+            Self::BinOp(BinOp::Div) => write!(f, "Div"),
+            Self::BinOp(BinOp::Mult) => write!(f, "Mult"),
         }
     }
 }
