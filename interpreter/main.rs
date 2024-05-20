@@ -1,30 +1,34 @@
 use env::Env;
 use saf::ast::parse;
 use saf::text::scan;
-use std::{fs, io};
+use std::{fs, io, iter};
 
 mod env;
 
 fn main() {
-    let mut args = std::env::args();
+    let mut args = std::env::args().peekable();
     let pname = args.next().expect("program name");
+    let echo = args.next_if(|arg| arg == "--echo").is_some();
     match args.next().as_deref() {
-        Some("--scan") => scanner(),
-        Some("--parse") => parser(),
-        Some("-f") => eval_file(args, &pname),
-        None => repl(),
+        Some("--scan") => scanner(echo),
+        Some("--parse") => parser(echo),
+        Some("-f") => eval_file(echo, args, &pname),
+        None => repl(echo),
         _ => print_usage(&pname),
     }
 }
 
 fn print_usage(pname: &str) {
-    println!("usage: {} [--scan | --parse | -f filename]", pname)
+    println!("usage: {} [--echo] [--scan | --parse | -f filename]", pname)
 }
 
-fn scanner() {
+fn scanner(echo: bool) {
     let mut buffer = String::new();
     let stdin = io::stdin();
     while stdin.read_line(&mut buffer).is_ok() {
+        if echo {
+            println!("> {}", buffer);
+        }
         match scan(&buffer) {
             Ok(tokens) => tokens.iter().for_each(|t| println!("{}", t)),
             Err(e) => println!("Error: {}", e),
@@ -33,10 +37,13 @@ fn scanner() {
     }
 }
 
-fn parser() {
+fn parser(echo: bool) {
     let mut buffer = String::new();
     let stdin = io::stdin();
     while stdin.read_line(&mut buffer).is_ok() {
+        if echo {
+            println!("> {}", buffer);
+        }
         match scan(&buffer).and_then(parse) {
             Ok(stmts) => stmts.iter().for_each(|s| println!("{}", s)),
             Err(e) => println!("Error: {}", e),
@@ -45,13 +52,16 @@ fn parser() {
     }
 }
 
-fn eval_file(mut args: std::env::Args, pname: &str) {
+fn eval_file(echo: bool, mut args: iter::Peekable<std::env::Args>, pname: &str) {
     let f = match args.next().map(fs::read_to_string) {
         Some(f) => f.expect("file read unsuccesful"),
         None => return print_usage(pname),
     };
     let mut env = Env::default();
     for line in f.lines() {
+        if echo {
+            println!("> {}", line);
+        }
         match scan(line)
             .and_then(parse)
             .and_then(|stmts| env.eval_stmts(stmts))
@@ -63,11 +73,14 @@ fn eval_file(mut args: std::env::Args, pname: &str) {
     }
 }
 
-fn repl() {
+fn repl(echo: bool) {
     let mut buffer = String::new();
     let stdin = io::stdin();
     let mut env = Env::default();
     while stdin.read_line(&mut buffer).is_ok() {
+        if echo {
+            println!("> {}", buffer);
+        }
         match scan(&buffer)
             .and_then(parse)
             .and_then(|stmts| env.eval_stmts(stmts))
