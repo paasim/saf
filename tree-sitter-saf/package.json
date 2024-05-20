@@ -1,0 +1,25 @@
+{
+  "name": "tree-sitter-saf",
+  "version": "0.1.0",
+  "description": "tree-sitter grammar for saf",
+  "main": "bindings/node",
+  "scripts": {
+    "test": "npm exec tree-sitter test"
+  },
+  "author": "Markus Paasiniemi",
+  "license": "MIT",
+  "dependencies": {
+    "nan": "^2.19.0"
+  },
+  "devDependencies": {
+    "tree-sitter-cli": "^0.22.6"
+  },
+  "tree-sitter": [
+    {
+      "scope": "source.saf",
+      "file-types": [
+        "saf"
+      ]
+    }
+  ]
+}

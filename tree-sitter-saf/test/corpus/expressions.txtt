@@ -1,0 +1,161 @@
+===
+String
+===
+
+"string";
+
+---
+
+(source_file
+  (exp
+    (string)))
+
+===
+Identifier
+===
+
+id_10;
+
+---
+
+(source_file
+  (exp
+    (identifier)))
+
+
+===
+Array
+===
+
+[];
+[1];
+[[], "a"];
+
+---
+
+(source_file
+  (exp
+    (array))
+  (exp
+    (array (int)))
+  (exp
+    (array (array) (string))))
+
+
+===
+Unary
+===
+
+!false;
+
+---
+
+(source_file
+  (exp
+    (unexp (unop) (bool))))
+
+
+===
+Paren
+===
+
+(-5);
+-(5);
+
+---
+
+(source_file
+  (exp
+    (paren
+      (unexp (unop) (int))))
+  (exp
+    (unexp
+      (unop)
+      (paren (int)))))
+
+
+===
+Binary
+===
+
+1 + 2;
+
+---
+
+(source_file
+  (exp
+    (binexp (int) (binop) (int))))
+
+===
+Cond
+===
+
+5 < 2 ? "cant be" : 5 * 2;
+
+---
+
+(source_file
+  (exp
+    (cond
+      (binexp (int) (binop) (int))
+      (string)
+      (binexp (int) (binop) (int)))))
+
+
+===
+Function
+===
+
+fn() 1;
+fn(x) 5 * x;
+fn(x, y, z) { 5; x + y };
+
+---
+
+(source_file
+  (exp
+    (func (def (int))))
+  (exp
+    (func
+      (params (identifier))
+      (def (binexp (int) (binop) (identifier)))))
+  (exp
+    (func
+      (params (identifier) (identifier) (identifier))
+      (def
+        (exp (int))
+        (binexp (identifier) (binop) (identifier))))))
+
+===
+Call
+===
+
+f();
+!f();
+-f(1)(true);
+f2("asd");
+f3(true, false, 5+2);
+
+---
+
+(source_file
+  (exp (call (identifier)))
+  (exp
+    (unexp (unop) (call (identifier))))
+  (exp
+    (unexp
+      (unop)
+      (call
+        (call (identifier) (args (int)))
+        (args (bool)))))
+  (exp
+    (call
+      (identifier)
+      (args (string))))
+  (exp
+    (call
+      (identifier)
+      (args
+        (bool)
+        (bool)
+        (binexp (int) (binop) (int))))))

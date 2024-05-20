@@ -80,3 +80,7 @@ Mostly it is like any other untyped programming language except for few special 
 - `<`: unary prefix operator that returns all the elements of the list except for the last one
 - `-`: unary prefix operator that returns the last element of the list
 - `+`: binary midfix operator that appends an element to a list
+
+## editor support
+
+see `tree-sitter-saf` for a [tree-sitter](https://tree-sitter.github.io/tree-sitter/)-grammar for saf.
