@@ -10,6 +10,7 @@ String
   (exp
     (string)))
 
+
 ===
 Identifier
 ===
@@ -86,6 +87,21 @@ Binary
   (exp
     (binexp (int) (binop) (int))))
 
+
+===
+Comment
+===
+
+1 + 2; # this is a comment
+
+---
+
+(source_file
+  (exp
+    (binexp (int) (binop) (int)))
+  (comment))
+
+
 ===
 Cond
 ===
@@ -126,6 +142,7 @@ fn(x, y, z) { 5; x + y };
         (exp (int))
         (binexp (identifier) (binop) (identifier))))))
 
+
 ===
 Call
 ===
@@ -139,23 +156,23 @@ f3(true, false, 5+2);
 ---
 
 (source_file
-  (exp (call (identifier)))
+  (exp (call expression: (identifier)))
   (exp
-    (unexp (unop) (call (identifier))))
+    (unexp (unop) (call expression: (identifier))))
   (exp
     (unexp
       (unop)
       (call
-        (call (identifier) (args (int)))
-        (args (bool)))))
+        expression: (call expression: (identifier) arguments: (args (int)))
+        arguments: (args (bool)))))
   (exp
     (call
-      (identifier)
-      (args (string))))
+      expression: (identifier)
+      arguments: (args (string))))
   (exp
     (call
-      (identifier)
-      (args
+      expression: (identifier)
+      arguments: (args
         (bool)
         (bool)
         (binexp (int) (binop) (int))))))

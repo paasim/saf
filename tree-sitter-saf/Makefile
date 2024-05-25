@@ -1,26 +1,29 @@
 .PHONY: echo init test parse parse-dbg playground
+EXAMPLE=../example.saf
 
 echo:
-	@echo make highlight: highlight example.saf
-	@echo make test: run tree-sitter test
+	@echo make highlight: highlight ../example.saf
+	@echo make parse: display parse tree for ../example.saf
+	@echo make test: run tests
+	@echo make playground: start tree-sitter playground
 
-src/parser.c: grammar.js
-	tree-sitter generate
+highlight: src/parser.c
+	npm run highlight $(EXAMPLE)
 
-highlight:
-	tree-sitter highlight ../example.saf
-
-test: src/parser.c
-	tree-sitter test
+install:
+	npm install
 
 parse: src/parser.c
-	tree-sitter parse ../example.saf
-
-parse-dbg: src/parser.c
-	tree-sitter parse -D ../example.saf
-
-tree-sitter-saf.wasm: src/parser.c
-	tree-sitter build-wasm
+	npm run parse $(EXAMPLE)
 
 playground: tree-sitter-saf.wasm
-	tree-sitter playground
+	npm exec tree-sitter playground
+
+src/parser.c: grammar.js
+	npm run generate
+
+test: src/parser.c
+	npm test
+
+tree-sitter-saf.wasm: src/parser.c
+	npm exec tree-sitter build -- --wasm

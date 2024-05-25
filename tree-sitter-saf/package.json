@@ -1,10 +1,13 @@
 {
   "name": "tree-sitter-saf",
-  "version": "0.1.0",
+  "version": "0.2.1",
   "description": "tree-sitter grammar for saf",
   "main": "bindings/node",
   "types": "bindings/node",
   "scripts": {
+    "highlight": "npm exec tree-sitter highlight",
+    "generate": "npm exec tree-sitter generate",
+    "parse": "npm exec tree-sitter parse",
     "test": "npm exec tree-sitter test",
     "install": "node-gyp-build",
     "prebuildify": "prebuildify --napi --strip"
@@ -30,9 +33,9 @@
   "tree-sitter": [
     {
       "scope": "source.saf",
-      "file-types": [
-        "saf"
-      ]
+      "highlights": "queries/highlights.scm",
+      "locals": "queries/locals.scm",
+      "file-types": [ "saf" ]
     }
   ],
   "files": [

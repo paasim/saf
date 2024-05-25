@@ -81,4 +81,4 @@ cargo build -r
 
 ## editor support
 
-see `tree-sitter-saf` for a [tree-sitter](https://tree-sitter.github.io/tree-sitter/)-grammar for saf.
+See [`tree-sitter-saf`](tree-sitter-saf/README.md) for tree-sitter-grammar.

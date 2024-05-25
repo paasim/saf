@@ -1,11 +1,34 @@
+const ORD = {
+  FUNC: 1,
+  COND: 2,
+  LOGICAL: 5,
+  MINUS: 6,
+  COMP: 7,
+  ADD: 8,
+  MULT: 9,
+  NEG: 10,
+  CALL: 20,
+}
+
 module.exports = grammar({
   name: 'saf',
+
+  extras: $ => [$.comment, /\s/, /\\\r?\n/],
 
   rules: {
     source_file: $ => repeat($._statement),
 
-    _statement: $ => seq(choice($.statement, alias($._exp, $.exp)), ';'),
-    statement: $ => seq($.identifier, '=', $._exp),
+    comment: $ => seq('#', /.*\n/),
+
+    _statement: $ => seq(choice(
+      $.statement,
+      alias($._exp, $.exp)
+    ), ';'),
+    statement: $ => seq(
+      field('name', $.identifier),
+      '=',
+      field('value', $._exp)
+    ),
 
     _exp: $ => choice(
       $.call,
@@ -16,51 +39,57 @@ module.exports = grammar({
       $._value
     ),
 
-    call: $ => prec.right(41, seq($._exp, '(', optional($.args), ')')),
+    call: $ => prec.right(ORD.CALL, seq(
+      field('expression', $._exp),
+      '(',
+      field('arguments', optional($.args)),
+      ')'
+    )),
     args: $ => seq($._exp, repeat(seq(',', $._exp))),
 
-    cond: $ => prec.left(2, seq($._exp, '?', $._exp, ':', $._exp)),
+    cond: $ => prec.left(ORD.COND, seq($._exp, '?', $._exp, ':', $._exp)),
 
-    binexp: $ => choice($._binexp5, $._binexp15, $._binexp25, $._binexp35),
-    _binexp5: $ => prec.left(5, seq($._exp, alias($.binop5, $.binop), $._exp)),
-    _binexp15: $ => prec.left(15, seq($._exp, alias($.binop15, $.binop), $._exp)),
-    _binexp25: $ => prec.left(25, seq($._exp, alias($.binop25, $.binop), $._exp)),
-    _binexp35: $ => prec.left(35, seq($._exp, alias($.binop35, $.binop), $._exp)),
-    binop5: $ => choice('|', '&'),
-    binop15: $ => choice('<', '>', '!=', '=='),
-    binop25: $ => choice('+', '-'),
-    binop35: $ => choice('*', '/'),
+    binexp: $ => choice(
+      prec.left(ORD.LOGICAL, seq($._exp, alias(choice('|', '&'), $.binop), $._exp)),
+      prec.left(ORD.COMP, seq($._exp, alias(choice('<', '>', '!=', '=='), $.binop), $._exp)),
+      prec.left(ORD.ADD, seq($._exp, alias(choice('+', '-'), $.binop), $._exp)),
+      prec.left(ORD.MULT, seq($._exp, alias(choice('*', '/'), $.binop), $._exp))
+    ),
 
     paren: $ => seq('(', $._exp, ')'),
 
     unexp: $ => seq($.unop, $._exp),
-    unop: $ => choice($._unop20, $._unop40),
-    _unop20: $ => prec(10, '-'),
-    _unop40: $ => prec(40, choice('!', '<')),
+    unop: $ => choice(
+      prec(ORD.MINUS, '-'),
+      prec(ORD.NEG, choice('!', '<'))
+    ),
 
     _value: $ => choice($.bool, $.int, $.string, $.identifier, $.array, $.func),
 
     bool: $ => choice('true', 'false'),
     int: $ => /\d+/,
-
-    string: $ => seq('"', $._string, '"'),
-    _string: $ => /[^"]+/,
-
+    string: $ => seq('"', /[^"]+/, '"'),
     identifier: $ => /[a-zA-Z][a-z0-9_]*/,
 
-    array: $ => seq('[', optional($._vals), ']'),
-    _vals: $ => seq($._value, repeat(seq(',', $._value))),
+    array: $ => seq(
+      '[',
+      optional(seq($._value, repeat(seq(',', $._value)))),
+      ']'
+    ),
 
-    func: $ => prec.left(1, seq(
+    func: $ => prec.left(ORD.FUNC, seq(
       'fn',
-      '(', optional($.params), ')',
-      $.def,
+      '(',
+      field('parameters', optional($.params)),
+      ')',
+      field('definition', $.def),
     )),
 
     params: $ => seq($.identifier, repeat(seq(',', $.identifier))),
 
-    def: $ => choice($._exp, seq('{', $._def_braces, '}')),
-    _def_braces: $ => seq(repeat($._statement), $._exp),
-
+    def: $ => choice(
+      $._exp,
+      seq('{', seq(repeat($._statement), $._exp), '}')
+    ),
   }
 });

@@ -1,0 +1,21 @@
+fn(x, y) x + z * 2; # this is a comment
+#<- keyword
+# ^ punctuation.bracket
+#  ^ variable.parameter
+#   ^ punctuation.delimiter
+#        ^ variable.parameter
+#          ^ operator
+#            ^ variable
+#                ^ number
+#                 ^ punctuation.delimiter
+#                       ^ comment
+# comment
+# <- comment
+str = true ? "true" : "false";
+# <- variable
+#   ^ operator
+#     ^ boolean
+#          ^ operator
+#            ^ string
+#                   ^ operator
+#                       ^ string

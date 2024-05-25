@@ -1,2 +1,0 @@
-plus = fn(x, y) x + y;
-plus(1)(2);

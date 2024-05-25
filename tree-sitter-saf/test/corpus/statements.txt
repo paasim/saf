@@ -1,0 +1,116 @@
+===
+String
+===
+
+x = "string";
+
+---
+
+(source_file
+  (statement
+    name: (identifier)
+    value: (string)))
+
+
+===
+Binary
+===
+
+y = 1 + x;
+
+---
+
+(source_file
+  (statement
+    name: (identifier)
+    value: (binexp (int) (binop) (identifier))))
+
+
+===
+Function / Call
+===
+
+f = fn(x, y) {
+  z = x + y;
+  # comment
+  k = 5 * z;
+  k # also a comment
+};
+g = fn(x) {
+  v = f(5); # comment
+  v ? 2 : 3
+};
+z = g();
+---
+
+(source_file
+  (statement
+    name: (identifier)
+    value: (func
+      parameters: (params (identifier) (identifier))
+      definition: (def
+        (statement
+          name: (identifier)
+          value: (binexp (identifier) (binop) (identifier)))
+        (comment)
+        (statement
+          name: (identifier)
+          value: (binexp (int) (binop) (identifier)))
+        (identifier)
+        (comment)
+      )))
+  (statement
+    name: (identifier)
+    value: (func
+      parameters: (params (identifier))
+      definition: (def
+        (statement
+          name: (identifier)
+          value: (call expression: (identifier) arguments: (args (int))))
+        (comment)
+        (cond
+          (identifier)
+          (int)
+          (int)))))
+  (statement
+    name: (identifier)
+    value: (call expression: (identifier))))
+
+
+===
+Nested
+===
+
+c = [1] < fn() [99];
+-(-c)();
+
+fib = fn(n) n < 3 ? 1 : fib(n-1) + fib(n-2);
+---
+
+(source_file
+  (statement
+    name: (identifier)
+    value: (binexp
+      (array (int))
+      (binop)
+      (func definition: (def (array (int))))))
+  (exp
+    (unexp (unop)
+      (call
+        expression: (paren (unexp (unop) (identifier))))))
+  (statement
+    name: (identifier)
+    value: (func
+      parameters: (params (identifier))
+      definition: (def
+        (cond
+          (binexp (identifier) (binop) (int))
+          (int)
+          (binexp
+            (call
+              expression: (identifier)
+              arguments: (args (binexp (identifier) (binop) (int))))
+            (binop)
+            (call
+              expression: (identifier)
+              arguments: (args (binexp (identifier) (binop) (int))))))))))
