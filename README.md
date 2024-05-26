@@ -37,16 +37,19 @@ cargo build -r
 > plus = fn(x, y) x + y;
 > plus(z, 2);
 7
+> # partial application is supported
 > plus_z = plus(z);
 > plus_z(2);
 7
 > plus(z)(2);
 7
 >
+> # functions can be passed as arguments parameters
 > twice = fn(x, f) { f(f(x)) };
 > twice(7, plus_z);
 17
 >
+> # recursion works normally
 > fib = fn(n) n < 3 ? 1 : fib(n-1) + fib(n-2);
 > fib(10);
 55
@@ -54,14 +57,15 @@ cargo build -r
 > v = [1, 2, 13];
 > v;
 [1, 2, 13]
-> -v;
+> -v; # last element of the list
 13
-> <v;
+> <v; # init, ie. everything except the last element of the list
 [1, 2]
 > v + 5 + 7;
 [1, 2, 13, 5, 7]
 >
-> mk_arr = fn(i) i == 0 ? [] : mk_arr(i-1) + (i - 1);
+> # iteration is achieved through recursion
+> mk_arr = fn(i) i == 0 ? [] : mk_arr(i-1) + (i-1);
 > arr = mk_arr(5);
 > arr;
 [0, 1, 2, 3, 4]
@@ -74,12 +78,6 @@ cargo build -r
 > reduce(arr, fn(acc, x) acc + x, 0);
 10
 ```
-
-Mostly it is like any other untyped programming language except for few special operators:
-- `!`: unary prefix operator that checks if a list is empty
-- `<`: unary prefix operator that returns all the elements of the list except for the last one
-- `-`: unary prefix operator that returns the last element of the list
-- `+`: binary midfix operator that appends an element to a list
 
 ## editor support
 
